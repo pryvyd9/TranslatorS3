@@ -1,0 +1,265 @@
+﻿<!-- g=grammar
+d=definition
+c=case
+n=nonterminal(reference to defined neterminals)
+t=terminal
+cta=case terminal array(only one symbol terminals)-->
+
+
+<g white-delimiters=" \t\n\r"  
+   unclassified-token-class-name="other"
+   unsupported-token-class-name="undefined">
+  <d name="op.list">
+    <c>
+      <d name="op">
+        <c>
+          <d name="while">
+            <c>
+              <t>while</t>
+              <d name="op0">
+                <c>
+                  <d name="id" token-class="identifier">
+                    <c>
+                      <d name="head" symbol-class="char">
+                        <cta>_qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM</cta>
+                      </d>
+                      <d name="tail">
+                        <c>
+                          <n>head</n>
+                          <n>tail</n>
+                        </c>
+                        <c>
+                          <d name="digit" symbol-class="digit">
+                            <cta>0123456789</cta>
+                          </d>
+                          <n>tail</n>
+                        </c>
+                        <c>
+                          <n>head</n>
+                        </c>
+                        <c>
+                          <n>digit</n>
+                        </c>
+                      </d>
+                    </c>
+                    <c>
+                      <n>head</n>
+                    </c>
+                  </d>
+                  <t>=</t>
+                  <n>op0</n>
+                </c>
+                <c>
+                  <d name="op1">
+                    <c>
+                      <n>op1</n>
+                      <t>or</t>
+                      <d name="op2">
+                        <c>
+                          <n>op2</n>
+                          <t>and</t>
+                          <d name="op3">
+                            <c>
+                              <t>not</t>
+                              <d name="op4">
+                                <c>
+                                  <n>op4</n>
+                                  <t>&lt;</t>
+                                  <d name="op5">
+                                    <c>
+                                      <n>op5</n>
+                                      <t>+</t>
+                                      <d name="op6">
+                                        <c>
+                                          <n>op6</n>
+                                          <t>*</t>
+                                          <d name="op7">
+                                            <c>
+                                              <n>op7</n>
+                                              <t>^</t>
+                                              <d name="op8">
+                                                <c>
+                                                  <t>-</t>
+                                                  <d name="op9">
+                                                    <c>
+                                                      <t>(</t>
+                                                      <n>op0</n>
+                                                      <t>)</t>
+                                                    </c>
+                                                    
+                                                    <c>
+                                                      <d name="member">
+                                                        <c>
+                                                          <d name="const">
+                                                            <c>
+                                                              <t>true</t>
+                                                            </c>
+                                                            <c>
+                                                              <t>false</t>
+                                                            </c>
+                                                            <c>
+                                                              <d name="int" token-class="const">
+                                                                <c>
+                                                                  <n>digit</n>
+                                                                  <n>int</n>
+                                                                </c>
+                                                                <c>
+                                                                  <n>digit</n>
+                                                                </c>
+                                                              </d>
+                                                            </c>
+                                                          </d>
+                                                        </c>
+                                                        <c>
+                                                          <n>id</n>
+                                                        </c>
+                                                      </d>
+                                                    </c>
+                                                  </d>
+                                                </c>
+                                                <c>
+                                                  <n>op9</n>
+                                                </c>
+                                              </d>
+                                            </c>
+                                            <c>
+                                              <n>op8</n>
+                                            </c>
+                                          </d>
+                                        </c>
+                                        <c>
+                                          <n>op6</n>
+                                          <t>/</t>
+                                          <n>op7</n>
+                                        </c>
+                                        <c>
+                                          <n>op7</n>
+                                        </c>
+                                      </d>
+                                    </c>
+                                    <c>
+                                      <n>op5</n>
+                                      <t>-</t>
+                                      <n>op6</n>
+                                    </c>
+                                    <c>
+                                      <n>op6</n>
+                                    </c>
+                                  </d>
+                                </c>
+                                <c>
+                                  <n>op4</n>
+                                  <t>&gt;</t>
+                                  <n>op5</n>
+                                </c>
+                                <c>
+                                  <n>op4</n>
+                                  <t>&lt;=</t>
+                                  <n>op5</n>
+                                </c>
+                                <c>
+                                  <n>op4</n>
+                                  <t>&gt;=</t>
+                                  <n>op5</n>
+                                </c>
+                                <c>
+                                  <n>op4</n>
+                                  <t>==</t>
+                                  <n>op5</n>
+                                </c>
+                                <c>
+                                  <n>op4</n>
+                                  <t>!=</t>
+                                  <n>op5</n>
+                                </c>
+                                <c>
+                                  <n>op5</n>
+                                </c>
+                              </d>
+                            </c>
+                            <c>
+                              <n>op4</n>
+                            </c>
+                          </d>
+                        </c>
+                        <c>
+                          <n>op3</n>
+                        </c>
+                      </d>
+                    </c>
+                    <c>
+                      <n>op2</n>
+                    </c>
+                  </d>
+                </c>
+              </d>
+              <t>do</t>
+              <n>op</n>
+            </c>
+          </d>
+        </c>
+        <c>
+          <d name="if">
+            <c>
+              <t>if</t>
+              <n>op0</n>
+              <t>?</t>
+              <n>op</n>
+              <t>:</t>
+              <n>op</n>
+            </c>
+            <c>
+              <t>if</t>
+              <n>op0</n>
+              <t>?</t>
+              <n>op</n>
+            </c>
+          </d>
+        </c>
+        <c>
+          <n>op0</n>
+        </c>
+        <c>
+          <t>{</t>
+          <n>op.list</n>
+          <t>}</t>
+        </c>
+        <c>
+          <d name="goto">
+            <c>
+              <t>goto</t>
+              <d name="label" token-class="label">
+                <c>
+                  <t>&gt;:</t>
+                  <n>id</n>
+                </c>
+              </d>
+            </c>
+            <c>
+              <n>label</n>
+            </c>
+          </d>
+        </c>
+        <c>
+          <d name="io">
+            <c>
+              <t>write</t>
+              <n>op0</n>
+            </c>
+            <c>
+              <t>read</t>
+              <n>id</n>
+            </c>
+          </d>
+        </c>
+      </d>
+      <t>;</t>
+      <n>op.list</n>
+    </c>
+    <c>
+      <n>op</n>
+      <t>;</t>
+    </c>
+    <c/>
+  </d>
+</g>

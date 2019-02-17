@@ -1,0 +1,35 @@
+﻿<Window x:Class="TranslatorS3.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TranslatorS3"
+        xmlns:editor="clr-namespace:Editor;assembly=Editor"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800"
+        Loaded="Window_Loaded" Closed="Window_Closed"
+        
+        >
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="24"/>
+            <RowDefinition Height="53*"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="31*"/>
+        </Grid.RowDefinitions>
+
+
+        <StackPanel Orientation="Horizontal" Background="#FFF1F1F1">
+            <Button Content="Config" Click="ShowConfiguration_Click"/>
+            <Button Content="Logger" Click="ShowLogger_Click"/>
+        </StackPanel>
+
+
+        <editor:ScriptEditor Name="EditorBox" Grid.Row="1"/>
+
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="3" Background="Black"/>
+
+        <editor:ErrorBox Name="ErrorBox" Grid.Row="3"/>
+
+    </Grid>
+</Window>

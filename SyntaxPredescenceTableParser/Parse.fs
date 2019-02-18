@@ -128,8 +128,9 @@ module private Parse =
             | [Rel.Greater] ->
               
                 let newBuffer = simplifyBuffer buffer table nodes
-                let appendedNewBuffer = simplifyBuffer (newBuffer@[stream|>List.head]) table nodes
-                check appendedNewBuffer (stream |> List.tail) table nodes
+                //let appendedNewBuffer = simplifyBuffer (newBuffer@[stream|>List.head]) table nodes
+                //check appendedNewBuffer (stream |> List.tail) table nodes
+                check newBuffer (stream |> List.tail) table nodes
 
             | _ ->
                 {

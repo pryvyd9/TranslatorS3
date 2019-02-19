@@ -147,9 +147,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Input\grammar-fixed - Copy.xml">
+    <None Include="Input\grammar-fixed.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Input\grammar-fixed - Copy %282%29.xml">
@@ -162,9 +162,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Input\grammar-fixed.xml">
+    <Resource Include="Input\grammar-fixed - Copy %284%29.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Input\grammar-fixed - Copy %282%29 - Copy.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

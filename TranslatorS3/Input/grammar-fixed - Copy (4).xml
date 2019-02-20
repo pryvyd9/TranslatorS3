@@ -6,12 +6,13 @@ t=terminal
 cta=case terminal array(only one symbol terminals)-->
 
 
-<g white-delimiters=" \t\n\r"
+<g white-delimiters=" \t\n\r"  
    unclassified-token-class-name="other"
    unsupported-token-class-name="undefined">
   <d name="op.list[0]">
     <c>
       <d name="op.list">
+      
         <c>
           <d name="op[0]">
             <c>
@@ -95,7 +96,7 @@ cta=case terminal array(only one symbol terminals)-->
                                                                               <t>^</t>
                                                                               <d name="op8">
                                                                                 <c>
-                                                                                  <t>--</t>
+                                                                                  <t>-</t>
                                                                                   <d name="op9[0]">
                                                                                     <c>
                                                                                       <d name="op9">
@@ -248,11 +249,11 @@ cta=case terminal array(only one symbol terminals)-->
                   </d>
                 </c>
                 <c>
-                  <n>op0[0]</n>
+                  <n>op0</n>
                 </c>
                 <c>
                   <t>{</t>
-                  <n>op.list[0]</n>
+                  <n>op.list</n>
                   <t>}</t>
                 </c>
                 <c>
@@ -287,14 +288,13 @@ cta=case terminal array(only one symbol terminals)-->
             </c>
           </d>
           <t>;</t>
-          <n>op.list</n>
-        </c>
-        <c>
-          <n>op[0]</n>
-          <t>;</t>
+
         </c>
       </d>
     </c>
+    <c>
+      <n>op.list[0]</n>
+      <n>op.list</n>
+    </c>
   </d>
-  
 </g>

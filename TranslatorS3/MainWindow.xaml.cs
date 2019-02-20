@@ -190,7 +190,8 @@ namespace TranslatorS3
                 predescenceTable.Nodes,
                 f,
                 //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>((x) => ParsedTokens),
-                Grammar.Nodes);
+                Grammar.Nodes,
+                Grammar.Nodes.Axiom);
 
             SavePredescenceTableTxt(predescenceTable, Grammar);
 

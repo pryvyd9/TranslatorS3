@@ -11,7 +11,7 @@ type internal Table = IDictionary<int, Core.IPredescenceNode>
 type internal Errors = seq<Core.IParserError>
 
 type SyntaxPredescenceTableParserResult =
-    {errors:Errors; countLeft:int option} with
+    {errors:Errors; position:int option} with
         interface Core.IParserResult with
             member this.Errors = this.errors
 

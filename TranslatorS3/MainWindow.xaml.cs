@@ -131,12 +131,12 @@ namespace TranslatorS3
 
 
 
-            ParserManager.InitializeParser(
-                "SyntaxRecursiveParser.dll",
-                "SyntaxRecursiveParser.SyntaxRecursiveParser",
-                true,
-                Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
-                Grammar.Nodes.Axiom);
+            //ParserManager.InitializeParser(
+            //    "SyntaxRecursiveParser.dll",
+            //    "SyntaxRecursiveParser.SyntaxRecursiveParser",
+            //    true,
+            //    Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
+            //    Grammar.Nodes.Axiom);
 
             //PushdownAutomaton pushdownAutomaton = new PushdownAutomaton();
             //pushdownAutomaton.Load();
@@ -184,14 +184,14 @@ namespace TranslatorS3
             //    //(Microsoft.FSharp.Core.FSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>) ((Func<IEnumerable<IParsedToken>>)(() => ParsedTokens)),
             //    Grammar.Nodes
             //    );
-            //parser = ParserManager.InitializeParser(
-            //    "SyntaxPredescenceTableParser.dll",
-            //    "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
-            //    predescenceTable.Nodes,
-            //    f,
-            //    //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>((x) => ParsedTokens),
-            //    Grammar.Nodes,
-            //    Grammar.Nodes.Axiom);
+            parser = ParserManager.InitializeParser(
+                "SyntaxPredescenceTableParser.dll",
+                "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+                predescenceTable.Nodes,
+                f,
+                //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>((x) => ParsedTokens),
+                Grammar.Nodes,
+                Grammar.Nodes.Axiom);
 
             SavePredescenceTableTxt(predescenceTable, Grammar);
 

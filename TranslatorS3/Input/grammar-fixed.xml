@@ -248,7 +248,7 @@ cta=case terminal array(only one symbol terminals)-->
                   </d>
                 </c>
                 <c>
-                  <n>op0</n>
+                  <n>op0[0]</n>
                 </c>
                 <c>
                   <t>{</t>

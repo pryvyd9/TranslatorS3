@@ -4,8 +4,6 @@
 module Seq =
     open System.Linq
     
-    let at index (s:'a seq) = s.ElementAt index
-    
     let ofType<'T> collection =
         seq {for c in collection
                 do
@@ -26,6 +24,12 @@ module List =
         | [], [] -> true
         | _ -> false
 
+    let ofType<'T> collection =
+        [
+            for c in collection do
+                    if box c :? 'T
+                    then yield box c :?> 'T
+        ]
 
 
 module private BaseSearching =
@@ -65,134 +69,31 @@ module private BaseSearching =
         inFunc collection mediums
         
 
-module Stack =
-    let take count stack =
-        match count with
-        | x when x > 0 ->
-            stack |> List.take (stack.Length - 1 - count)
-        | 0 ->
-            stack
-        | _ ->
-            failwith("Count cannot be less than 0.")
-            
-
-module private Parse =
-  
-
-    let rec findFirstLowerFromEnd table stack =
-        match stack with
-        | f::s::t when Rel.getRel s f table = [Rel.Lower] ->
-            (t |> List.length)
-        | _::t ->
-            findFirstLowerFromEnd table t
-        | _ ->
-            0
-
-    let rec simplifyStack stack table nodes =
-
-        if stack |> List.length = 0 
-        then stack
-        else
-           
-            let firstLowerIndexFromEnd = findFirstLowerFromEnd table stack
-            let elementsToChange = stack |> Stack.take firstLowerIndexFromEnd
-        
-            let baseElement = BaseSearching.findBase (elementsToChange |> List.rev) nodes
-            try
-                System.Console.WriteLine((nodes |> List.find (fun x -> x.Id = baseElement.Value)).ToString() )
-        
-            with _ -> ()
-        
-        
-            match baseElement with
-            | Some be ->
-                match firstLowerIndexFromEnd with
-                | x when x > 0 ->
-                    be::(stack |> List.skip firstLowerIndexFromEnd)
-                | 0 ->
-                    [be]
-                //be::(stack |> List.skip firstLowerIndexFromEnd)
-            | None ->
-                elementsToChange.Head::(simplifyStack elementsToChange.Tail table nodes)
-                
-    let simplifyStackGreedy stack table nodes =
-        let rec internalRec oldStack table nodes =
-            let newStack = simplifyStack (stack) table nodes
-            if newStack |> List.equals oldStack
-            then
-                newStack
-            else
-                internalRec newStack table nodes
-        internalRec stack table nodes
-
-
-    let rec check stack stream table nodes axiom =
-        match stack |> List.length, stream |> List.length with
-        | 1, 0 ->
-            if stack.[0] = axiom
-            then {errors = []; countLeft = None}
-            else
-                let newStack = simplifyStack (stack) table nodes
-                if newStack |> List.equals stack 
-                then
-                    {
-                        countLeft = Some 0;
-                        errors = [{
-                            message = "Axiom was not found";
-                            tag = "syntax"; 
-                            tokensOnError = Seq.empty
-                        }]; 
-                    }
-                else
-                    check newStack [] table nodes axiom
-        | _, 0 ->
-            let newStack = simplifyStack (stack) table nodes
-            if newStack |> List.equals stack 
-            then
-                {
-                    countLeft = Some 0;
-                    errors = [{
-                        message = "Axiom was not found";
-                        tag = "syntax"; 
-                        tokensOnError = Seq.empty
-                    }]
-                }
-            else
-                check newStack [] table nodes axiom
-        | _ ->
-            let rel = Rel.getRel stack.Head stream.Head table
-
-            match rel with
-            | [Rel.Lower] | [Rel.Equal] ->
-                check (stream.Head :: stack) stream.Tail table nodes axiom
-            | [Rel.Greater] ->
-                let newStack = simplifyStack (stack) table nodes
-                
-                check (stream.Head :: newStack) stream.Tail table nodes axiom
-            | _ ->
-                {
-                    countLeft = Some stream.Length;
-                    errors = [{
-                        message = "Undefined relationship";
-                        tag = "syntax"; 
-                        tokensOnError = Seq.empty
-                    }]
-                }
-
 
 module private ParseSimple =
 
+    type RelRes<'T> = 
+        | Found of 'T
+        | Undefined of 'T
+        | NotFound
+
     let findFirstGreater stream table startIndex =
-        let rec internalFunc stream table =
-            match stream with
-            | f :: s :: _  when Rel.getRel (snd f) (snd s) table = [Rel.Greater] ->
-                Some f
-            | [] ->
-                None
-            | _ ->
-                internalFunc (stream.Tail) table
-        internalFunc (stream |> List.skip startIndex) table
-            
+           let rec internalFunc stream table =
+               match stream with
+               | f :: s :: _ ->
+                   let rel = Rel.getRel (snd f) (snd s) table 
+                   match rel with
+                   | [Rel.Greater] ->
+                       Found f
+                   | [Rel.Undefined] | [] ->
+                       Undefined f
+                   | _ ->
+                       internalFunc (stream.Tail) table
+               | [] ->
+                   NotFound
+               | _ ->
+                   internalFunc (stream.Tail) table
+           internalFunc (stream |> List.skip startIndex) table
 
     let findLastLower stream table startIndex =
         let rec internalFunc stream table =
@@ -205,95 +106,232 @@ module private ParseSimple =
                internalFunc (stream.Tail) table
         internalFunc (stream |> List.take (startIndex + 1) |> List.rev) table
 
-    //let simplifyBuffer buffer table fstGreater lstLower =
-    //    match fstGreater, lstLower with
-    //    | None, Some lstLower ->
-
-    //    | Some fstGreater, None ->
-
-    //    | Some fstGreater, Some lstLower ->
-
-    //    | _ ->
-
 
 
     let check stream table nodes axiom =
-            
+        let mediums = nodes |> List.ofType<Core.IMedium>
         let rec intFunc buffer =
-            printfn "%A" buffer
+
+            let state = 
+                buffer 
+                |> List.map (fun x ->((nodes:Core.INode list) |> List.find (fun y -> y.Id = snd x)).ToString())
+                |> String.concat ""
+
+            printfn "%s" state
+
             match buffer |> List.length with
             | 1 ->
-                let baseElement = BaseSearching.findBaseGreedy (buffer |> List.map (fun x -> snd x)) nodes
+                let baseElement = BaseSearching.findBaseGreedy (buffer |> List.map (fun x -> snd x)) mediums
+                //printfn "%A" (buffer |> List.map (fun x -> (nodes:Core.INode list) |> List.find (fun y -> y.Id = snd x)))
+
                 if baseElement.Head = axiom 
-                then {errors = []; countLeft = None;}
+                then {errors = []; position = None;}
                 else
                     {
-                        
                         errors = [{
                             message = "Axiom not found";
                             tag = "syntax";
                             tokensOnError = Seq.empty;
                         }];
-                        countLeft = Some 1;
+                        position = Some 1;
                     }
             | _ ->
                 let fstGreater = findFirstGreater buffer table 0
 
-                let fstGreaterIndex = 
-                    match fstGreater with
-                    | Some fstGreater -> buffer |> List.findIndexOf fstGreater
-                    | None -> buffer.Length - 1
 
-                let lstLower = findLastLower buffer table fstGreaterIndex
-
-                let lstLowerIndex =
-                    match lstLower with
-                    | Some lstLower -> buffer |> List.findIndexOf lstLower
-                    | None -> 0
-
-                let count = fstGreaterIndex - lstLowerIndex + 1
-
-                let nodesToChange = buffer |> List.skip lstLowerIndex |> List.take count
-
-                let basic = BaseSearching.findBase (nodesToChange|> List.map (fun x -> snd x)) nodes
-
-                match basic with
-                | None ->
-                    let message =
-                        match fstGreater with
-                        | None ->
-                            "Unexpected end of file."
-                        | Some fstGreater ->
-                            let expected = 
-                                table.[snd fstGreater].Relashionships.Keys 
-                                |> List.ofSeq  
-                                |> List.map (fun x -> 
-                                    let ns = nodes |> List.tryFind (fun y -> y.Id = x)
-                                    match ns with
-                                    | None -> ""
-                                    | Some s ->
-                                        s.ToString()
-                                )
-                                |> String.concat " , "
-                            "Unexpected token. Expected: " + expected
-
+                match fstGreater with
+                | Undefined u ->
+                    let expected = 
+                        table.[snd u].Relashionships.Keys 
+                        |> List.ofSeq  
+                        |> List.map (fun x -> 
+                            let ns = nodes |> List.tryFind (fun y -> y.Id = x)
+                            match ns with
+                            | None -> ""
+                            | Some s ->
+                                s.ToString()
+                        )
+                        |> String.concat " , "
+                    let message = "Unexpected token. Expected: " + expected
                     {
                         errors = [{
                             message = message;
                             tag = "syntax";
                             tokensOnError = Seq.empty;
                         }];
-                        countLeft = Some fstGreaterIndex;
+                        position = Some (fst u);
                     }
-                | Some basic ->
-                    let fstPart = buffer |> List.take lstLowerIndex
-                    let lstPart = buffer |> List.skip (fstGreaterIndex + 1)
-                    let newBuffer = fstPart @ [fstGreaterIndex, basic] @ lstPart
-                    intFunc newBuffer
+                | _ ->
+                    let fstGreaterIndex = 
+                        match fstGreater with
+                        | Found fstGreater -> buffer |> List.findIndexOf fstGreater
+                        | NotFound -> buffer.Length - 1
+                        | _ -> failwith("undefined behaviour")
+
+                    let lstLower = findLastLower buffer table fstGreaterIndex
+
+                    let lstLowerIndex =
+                        match lstLower with
+                        | Some lstLower -> buffer |> List.findIndexOf lstLower
+                        | None -> 0
+
+                    let count = fstGreaterIndex - lstLowerIndex + 1
+
+                    let nodesToChange = buffer |> List.skip lstLowerIndex |> List.take count
+
+                    let basic = BaseSearching.findBase (nodesToChange|> List.map (fun x -> snd x)) mediums
+
+                    match basic with
+                    | None ->
+                        {
+                            errors = [{
+                                message = "Unexpected end of file.";
+                                tag = "syntax";
+                                tokensOnError = Seq.empty;
+                            }];
+                            position = Some fstGreaterIndex;
+                        }
+                    | Some basic ->
+                        let fstPart = buffer |> List.take lstLowerIndex
+                        let lstPart = buffer |> List.skip (fstGreaterIndex + 1)
+                        let newBuffer = fstPart @ [fstGreaterIndex, basic] @ lstPart
+                        intFunc newBuffer
 
         let indexedStream = stream |> List.zip [0..stream.Length - 1]
      
         intFunc indexedStream
+
+
+//module private ParseSimple =
+
+//    type RelRes = 
+//        | Found of int*int
+//        | Undefined of int*int
+//        | NotFound
+
+
+//    let findFirstGreater stream table startIndex =
+//           let rec internalFunc stream table =
+//               match stream with
+//               | f :: s :: _ ->
+//                   let rel = Rel.getRel (snd f) (snd s) table 
+//                   match rel with
+//                   | [Rel.Greater] ->
+//                       Found f
+//                   | [Rel.Undefined] | [] ->
+//                       Undefined f
+//                   | _ ->
+//                       NotFound
+//               | [] ->
+//                   NotFound
+//               | _ ->
+//                   internalFunc (stream.Tail) table
+//           internalFunc (stream |> List.skip startIndex) table
+
+//    //let findFirstGreater stream table startIndex =
+//    //    let rec internalFunc stream table =
+//    //        match stream with
+//    //        | f :: s :: _  when Rel.getRel (snd f) (snd s) table = [Rel.Greater] ->
+//    //            Some f
+//    //        | [] ->
+//    //            None
+//    //        | _ ->
+//    //            internalFunc (stream.Tail) table
+//    //    internalFunc (stream |> List.skip startIndex) table
+            
+
+//    let findLastLower stream table startIndex =
+//        let rec internalFunc stream table =
+//           match stream with
+//           | f :: s :: _  when Rel.getRel (snd s) (snd f) table = [Rel.Lower] ->
+//               Some f
+//           | [] ->
+//               None
+//           | _ ->
+//               internalFunc (stream.Tail) table
+//        internalFunc (stream |> List.take (startIndex + 1) |> List.rev) table
+
+
+
+//    let check stream table nodes axiom =
+//        let mediums = nodes |> List.ofType<Core.IMedium>
+//        let rec intFunc buffer =
+//            //printfn "%A" buffer
+//            printfn "%s" (buffer |> List.map (fun x ->( (nodes:Core.INode list) |> List.find (fun y -> y.Id = snd x)).ToString() ) |> String.concat "") 
+//            match buffer |> List.length with
+//            | 1 ->
+//                let baseElement = BaseSearching.findBaseGreedy (buffer |> List.map (fun x -> snd x)) mediums
+//                //printfn "%A" (buffer |> List.map (fun x -> (nodes:Core.INode list) |> List.find (fun y -> y.Id = snd x)))
+
+//                if baseElement.Head = axiom 
+//                then {errors = []; countLeft = None;}
+//                else
+//                    {
+//                        errors = [{
+//                            message = "Axiom not found";
+//                            tag = "syntax";
+//                            tokensOnError = Seq.empty;
+//                        }];
+//                        countLeft = Some 1;
+//                    }
+//            | _ ->
+//                let fstGreater = findFirstGreater buffer table 0
+
+//                let fstGreaterIndex = 
+//                    match fstGreater with
+//                    | Some fstGreater -> buffer |> List.findIndexOf fstGreater
+//                    | None -> buffer.Length - 1
+
+//                let lstLower = findLastLower buffer table fstGreaterIndex
+
+//                let lstLowerIndex =
+//                    match lstLower with
+//                    | Some lstLower -> buffer |> List.findIndexOf lstLower
+//                    | None -> 0
+
+//                let count = fstGreaterIndex - lstLowerIndex + 1
+
+//                let nodesToChange = buffer |> List.skip lstLowerIndex |> List.take count
+
+//                let basic = BaseSearching.findBase (nodesToChange|> List.map (fun x -> snd x)) mediums
+
+//                match basic with
+//                | None ->
+//                    let message =
+//                        match fstGreater with
+//                        | None ->
+//                            "Unexpected end of file."
+//                        | Some fstGreater ->
+//                            let expected = 
+//                                table.[snd fstGreater].Relashionships.Keys 
+//                                |> List.ofSeq  
+//                                |> List.map (fun x -> 
+//                                    let ns = nodes |> List.tryFind (fun y -> y.Id = x)
+//                                    match ns with
+//                                    | None -> ""
+//                                    | Some s ->
+//                                        s.ToString()
+//                                )
+//                                |> String.concat " , "
+//                            "Unexpected token. Expected: " + expected
+
+//                    {
+//                        errors = [{
+//                            message = message;
+//                            tag = "syntax";
+//                            tokensOnError = Seq.empty;
+//                        }];
+//                        countLeft = Some fstGreaterIndex;
+//                    }
+//                | Some basic ->
+//                    let fstPart = buffer |> List.take lstLowerIndex
+//                    let lstPart = buffer |> List.skip (fstGreaterIndex + 1)
+//                    let newBuffer = fstPart @ [fstGreaterIndex, basic] @ lstPart
+//                    intFunc newBuffer
+
+//        let indexedStream = stream |> List.zip [0..stream.Length - 1]
+     
+//        intFunc indexedStream
 
 
 
@@ -309,7 +347,7 @@ type SyntaxPredescenceTableParser(
         let tokens = tokenSelector.Invoke()
 
         if tokens = null
-        then {errors = []; countLeft = None} :> Core.IParserResult
+        then {errors = []; position = None} :> Core.IParserResult
         else
 
             let buffer = 
@@ -325,31 +363,44 @@ type SyntaxPredescenceTableParser(
                 //|> List.skip 1
                 |> List.choose(fun x -> Some x.Id)
 
-            let mediums = nodes |> Seq.ofType<Core.IMedium> |> List.ofSeq
+            let nodes = nodes (*|> Seq.ofType<Core.IMedium>*) |> List.ofSeq
 
             // Make internal result type
             // Store original in-stream position 
             // in order to get ParsedToken later
 
-            match ParseSimple.check stream table mediums axiom.Id with
-            |{errors=x; countLeft=Some y} as result when x |> Seq.isEmpty ->
+            match ParseSimple.check stream table nodes axiom.Id with
+            |{errors=x; position=Some y} as result ->
 
                 let tokenOnError = 
                     tokens 
-                    |> Seq.at ((tokens |> Seq.length) - y)
+                    |> Seq.item ((tokens |> Seq.length) - y)
 
                 let tokenBefore =
                     tokens  
-                    |> Seq.at ((tokens |> Seq.length) - y - 1)
+                    |> Seq.item ((tokens |> Seq.length) - y - 1)
 
-                {
-                    result with errors = [{
-                        message = "Undefined relationship"; 
-                        tag = "syntax";
-                        tokensOnError = [tokenBefore;tokenOnError] |> Seq.ofList;
-                    }]
-                }:> Core.IParserResult
+                if (x |> Seq.isEmpty)
+                then
+
+                    {
+                        result with errors = [{
+                            message = "Undefined relationship"; 
+                            tag = "syntax";
+                            tokensOnError = [tokenBefore;tokenOnError] |> Seq.ofList;
+                        }]
+                    }:> Core.IParserResult
+                else
+                    let j = (x |> Seq.head)
+                    {
+                        result with errors = [{
+                            message = j.Message; 
+                            tag = "syntax";
+                            tokensOnError = [tokenBefore;tokenOnError] |> Seq.ofList;
+                        }]
+                    }:> Core.IParserResult
             | x ->
+
                 x :> Core.IParserResult
 
     interface Core.ISyntaxParser with

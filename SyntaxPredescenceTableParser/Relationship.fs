@@ -1,13 +1,13 @@
 ﻿module internal SyntaxPredescenceTableParser.Rel
 
-open System.Linq
 let private distinguishRelationship relationship:Rel seq =
     match relationship with
     | Rel.Undefined -> Seq.empty
     |_ ->
-        (System.Enum.GetValues(typeof<Rel>) :?> array<Rel>)
-            .Select(fun x -> x &&& relationship)
-            .Where(fun x-> x <> Rel.Undefined)
+        System.Enum.GetValues(typeof<Rel>) :?> array<Rel>
+        |> Array.map (fun x -> x &&& relationship)
+        |> Array.filter (fun x -> x <> Rel.Undefined)
+        |> Seq.ofArray
     
 let private getRelationship left right (table:Table) =
     if table.ContainsKey(left) |> not ||

@@ -45,6 +45,9 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Relationship.fs" />
+    <Compile Include="Extentions.fs" />
+    <Compile Include="BaseSearching.fs" />
+    <Compile Include="ParseSimple.fs" />
     <Compile Include="Parse.fs" />
     <None Include="Script.fsx" />
     <Content Include="packages.config" />

@@ -18,12 +18,14 @@
             <RowDefinition Height="31*"/>
         </Grid.RowDefinitions>
 
-
-        <StackPanel Orientation="Horizontal" Background="#FFF1F1F1">
-            <Button Content="Config" Click="ShowConfiguration_Click"/>
-            <Button Content="Logger" Click="ShowLogger_Click"/>
-        </StackPanel>
-
+        <Menu>
+            <!--<MenuItem Header="File">
+                <MenuItem Header="Open"/>
+                <MenuItem Header="Save"/>
+            </MenuItem>-->
+            <MenuItem Header="Config" Click="ShowConfiguration_Click"/>
+            <MenuItem Header="Logger" Click="ShowLogger_Click"/>
+        </Menu>
 
         <editor:ScriptEditor Name="EditorBox" Grid.Row="1"/>
 

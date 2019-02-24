@@ -1,8 +1,7 @@
 ﻿[<AutoOpen>]
 module SyntaxPredescenceTableParser.Types
-open System.Collections.Generic
-open System.Linq
 
+open System.Collections.Generic
 
 type internal Rel = Core.Relationship
 
@@ -10,7 +9,7 @@ type internal Rel = Core.Relationship
 type internal Table = IDictionary<int, Core.IPredescenceNode>
 type internal Errors = seq<Core.IParserError>
 
-type SyntaxPredescenceTableParserResult =
+type public SyntaxPredescenceTableParserResult =
     {errors:Errors; position:int option} with
         interface Core.IParserResult with
             member this.Errors = this.errors

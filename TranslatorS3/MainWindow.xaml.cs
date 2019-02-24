@@ -95,6 +95,7 @@ namespace TranslatorS3
 
         private void InitializeParsers()
         {
+            #region Grammar
             Grammar = new Grammar();
             //Grammar.Load();
             FiniteAutomaton finiteAutomaton = new FiniteAutomaton();
@@ -128,7 +129,7 @@ namespace TranslatorS3
             SaveGrammarFactorizedTxt(Grammar);
             //Grammar.Save();
 
-
+            #endregion
 
 
             //ParserManager.InitializeParser(
@@ -163,6 +164,7 @@ namespace TranslatorS3
                Grammar.ClassTable);
 
 
+            #region Predescence
             // Create predescence table
 
             parser = ParserManager.InitializeParser(
@@ -173,28 +175,19 @@ namespace TranslatorS3
             var predescenceTable = new PredescenceTable();
             predescenceTable.Parse(parser);
 
-            //var f = Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit,IEnumerable<IParsedToken>>((x) => ParsedTokens);
             var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
 
-            //new SyntaxPredescenceTableParser.SyntaxPredescenceTableParser(
-            //    predescenceTable.Nodes,
-            //    //() => ParsedTokens,
-            //    f,
-            //    //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Tuple<Microsoft.FSharp.Core.Unit,IEnumerable<IParsedToken>>>(() => ParsedTokens),
-            //    //(Microsoft.FSharp.Core.FSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>) ((Func<IEnumerable<IParsedToken>>)(() => ParsedTokens)),
-            //    Grammar.Nodes
-            //    );
             parser = ParserManager.InitializeParser(
                 "SyntaxPredescenceTableParser.dll",
                 "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
                 predescenceTable.Nodes,
                 f,
-                //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>((x) => ParsedTokens),
                 Grammar.Nodes,
                 Grammar.Nodes.Axiom);
 
             SavePredescenceTableTxt(predescenceTable, Grammar);
 
+            #endregion
         }
 
 

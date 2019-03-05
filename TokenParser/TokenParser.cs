@@ -135,8 +135,8 @@ namespace TokenParser
 
             Logger.AddRange("parsed-nodes", parsedNodesTable.GetTableEntities(null));
             Logger.AddRange("identifiers", parsedNodesTable.GetTableEntities(1));
-            Logger.AddRange("constants", parsedNodesTable.GetTableEntities(3));
-            Logger.AddRange("labels", parsedNodesTable.GetTableEntities(2));
+            Logger.AddRange("constants", parsedNodesTable.GetTableEntities(2));
+            Logger.AddRange("labels", parsedNodesTable.GetTableEntities(3));
 
             return new TokenParserResult
             {

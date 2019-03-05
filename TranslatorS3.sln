@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogView", "LogView\LogView.
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SyntaxPredescenceTableParser", "SyntaxPredescenceTableParser\SyntaxPredescenceTableParser.fsproj", "{73A695FE-3B52-4AF7-8639-58FB700E91FC}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SyntaxPredescenceTableParserWithPOLIZ", "SyntaxPredescenceTableParserWithPOLIZ\SyntaxPredescenceTableParserWithPOLIZ.fsproj", "{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,10 @@ Global
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

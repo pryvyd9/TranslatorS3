@@ -65,6 +65,8 @@ namespace TranslatorS3
 
         private void Update()
         {
+            //var watch = System.Diagnostics.Stopwatch.StartNew();
+
             ParserManager.TokenParser.Script = script.Content;
             TokenParserResult = ParserManager.TokenParser.Parse();
 
@@ -73,6 +75,8 @@ namespace TranslatorS3
 
             ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
             SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+            //Console.WriteLine(watch.Elapsed.TotalMilliseconds);
 
             EditorBox.Update();
 
@@ -165,12 +169,12 @@ namespace TranslatorS3
 
 
             #region Predescence
-            // Create predescence table
+            //Create predescence table
 
             parser = ParserManager.InitializeParser(
-                "PredescenceTableParser.dll",
-                "PredescenceTableParser.PredescenceTableParser",
-                Grammar.Nodes);
+               "PredescenceTableParser.dll",
+               "PredescenceTableParser.PredescenceTableParser",
+               Grammar.Nodes);
 
             var predescenceTable = new PredescenceTable();
             predescenceTable.Parse(parser);
@@ -178,12 +182,20 @@ namespace TranslatorS3
             var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
 
             parser = ParserManager.InitializeParser(
-                "SyntaxPredescenceTableParser.dll",
-                "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
-                predescenceTable.Nodes,
-                f,
-                Grammar.Nodes,
-                Grammar.Nodes.Axiom);
+               "SyntaxPredescenceTableParserWithPOLIZ.dll",
+               "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+               predescenceTable.Nodes,
+               f,
+               Grammar.Nodes,
+               Grammar.Nodes.Axiom);
+
+            //parser = ParserManager.InitializeParser(
+            //    "SyntaxPredescenceTableParser.dll",
+            //    "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+            //    predescenceTable.Nodes,
+            //    f,
+            //    Grammar.Nodes,
+            //    Grammar.Nodes.Axiom);
 
             SavePredescenceTableTxt(predescenceTable, Grammar);
 

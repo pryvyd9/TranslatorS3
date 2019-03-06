@@ -47,6 +47,7 @@
     <Compile Include="Relationship.fs" />
     <Compile Include="Extentions.fs" />
     <Compile Include="BaseSearching.fs" />
+    <Compile Include="Poliz.fs" />
     <Compile Include="ParseSimple.fs" />
     <Compile Include="Parse.fs" />
     <None Include="Script.fsx" />
@@ -54,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
-      <HintPath>..\packages\FSharp.Core.4.5.2\lib\net45\FSharp.Core.dll</HintPath>
+      <HintPath>..\packages\FSharp.Core.4.6.2\lib\net45\FSharp.Core.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />

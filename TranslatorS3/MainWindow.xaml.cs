@@ -126,7 +126,7 @@ namespace TranslatorS3
 
             finiteAutomaton.Parse(parser);
             //finiteAutomaton.Save();
-            finiteAutomaton.Load();
+            //finiteAutomaton.Load();
 
 
             SaveGrammarTxt(Grammar);

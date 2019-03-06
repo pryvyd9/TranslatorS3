@@ -52,7 +52,7 @@ let log buffer (nodes:Core.INode list) =
         |> String.concat ""
 
     Core.Logger.Add ("syntaxPredescenceParser", state)
-    printfn "%s" state
+    //printfn "%s" state
 
 let getExpected undefined (table:Table) (nodes:Core.INode list) =
    
@@ -77,12 +77,15 @@ let check stream table (nodes:Core.INode list) axiom =
 
     let mediums = nodeObjects |> List.ofType<Core.IMedium>
 
+    
+
     let rec intFunc buffer =
         log buffer nodes
 
         match buffer |> List.length with
         | 1 ->
             let baseElement = BaseSearching.findBaseGreedy (buffer |> List.map (fun x -> snd x)) mediums
+            //Poliz.finalize()
 
             if baseElement.Head = axiom 
             then {errors = []; position = None;}
@@ -99,6 +102,7 @@ let check stream table (nodes:Core.INode list) axiom =
             match findFirstGreater buffer table 0 with
             | Undefined fstGreater ->
                 let expected = getExpected fstGreater table nodes
+                //Poliz.finalize()
 
                 let message = "Unexpected token. Expected: " + expected
                 {
@@ -132,6 +136,8 @@ let check stream table (nodes:Core.INode list) axiom =
                 match basic with
                 | None ->
                     let expected = getExpected (buffer |> List.last) table nodes
+                    //Poliz.poliz nodesToChange nodes
+                    //Poliz.finalize()
 
                     {
                         errors = [{
@@ -142,6 +148,9 @@ let check stream table (nodes:Core.INode list) axiom =
                         position = Some ((stream |> List.length) - 1);
                     }
                 | Some basic ->
+                    Poliz.poliz nodesToChange nodes
+
+
                     let fstPart = buffer |> List.take lstLowerIndex
                     let lstPart = buffer |> List.skip (fstGreaterIndex + 1)
                     let newBuffer = fstPart @ [fstGreaterIndex, basic] @ lstPart
@@ -149,4 +158,9 @@ let check stream table (nodes:Core.INode list) axiom =
 
     let indexedStream = stream |> List.zip [0..stream.Length - 1]
      
-    intFunc indexedStream
+    let result = intFunc indexedStream
+
+    //Poliz.finalize()
+
+    result
+

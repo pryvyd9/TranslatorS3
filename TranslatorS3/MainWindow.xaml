@@ -27,6 +27,7 @@
             <MenuItem Header="Logger" Click="ShowLogger_Click"/>
         </Menu>
 
+        <!--<editor:ScriptEditor Name="EditorBox" Grid.Row="1"/>-->
         <editor:ScriptEditor Name="EditorBox" Grid.Row="1"/>
 
         <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="3" Background="Black"/>

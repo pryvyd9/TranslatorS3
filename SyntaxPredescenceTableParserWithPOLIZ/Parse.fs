@@ -11,7 +11,10 @@ type SyntaxPredescenceTableParser(
     member __.Parse() =
         Core.Logger.Clear("syntaxPredescenceParser")
 
+
         let tokens = tokenSelector.Invoke()
+
+        Poliz.parsedNodes <- tokens |> List.ofSeq
 
         if tokens = null
         then {errors = []; position = None} :> Core.IParserResult

@@ -11,58 +11,31 @@ let mutable processed = []
 let mutable parsedNodes:Core.IParsedToken list = []
 
 let mutable polizList:list<int*Core.INode> = []
-//let mutable polizList = []
 
-type Var = Operator of string*(int list -> int list) | Constant of int | Variable of string ref*string | Undefined of string
+type Member = 
+    | Operator of string*(int list -> int list) 
+    | Constant of int 
+    | Variable of value:string ref*name:string 
+    | Undefined of string
 
-let calculate (expression: Var list) =
-    let rec inFunc buffer (stream:Var list) =
-        match stream with
+
+let calculate (expressionStack:Member list) =
+    let rec inFunc buffer =
+        function
         | head :: tail ->
             match head with
             | Constant c ->
                 inFunc (c :: buffer) tail
             | Variable (value, name) ->
-                let num = ref 0
-                if Int32.TryParse (value.Value, num)
-                then
-                    inFunc (int value.Value :: buffer) tail
-                else
-                    "Unassigned variable " + name
-                //if value.Value <> null
-                //then
-                //    inFunc (int value.Value :: buffer) tail
-                //else
-                //    "Unassigned variable " + name
-            | Operator (o, func) ->
-                let result = func buffer
+                match Int32.TryParse (value.Value) with
+                | true, _ -> inFunc (int value.Value :: buffer) tail
+                | _ -> "Unassigned variable " + name
+            | Operator (_, func) ->
                 inFunc (func buffer) tail
-                //match buffer with
-                //| f :: s :: buffer ->
-                //    let result = func buffer
-                //    inFunc (func buffer) tail
-                //| _ ->
-                //    failwith("not enough arguments for operator to function")
-
-
-                //match o with
-                //| "+" -> 
-                //    match buffer with
-                //    | f :: s :: buffer ->
-                //        let result = func buffer
-                //        inFunc (func buffer) tail
-                //    | _ ->
-                //        failwith("not enough arguments for operator to function")
-                //| "-" ->
-                //    match buffer with
-                //    | f :: s :: buffer ->
-                //        inFunc (s - f :: buffer) tail
-                //    | _ ->
-                //        failwith("not enough arguments for operator to function")
             | Undefined u ->
-                failwith("undefined member in expression")
-        | _ -> buffer.[0] |> string
-    inFunc [] expression
+                failwith("undefined member '" + u + "' in expression")
+        | _ -> buffer.Head |> string
+    inFunc [] (expressionStack |> List.rev) 
 
 let operatorFuncs = dict[
     "+",(function f::s::tail -> s + f :: tail | _ -> []);
@@ -71,97 +44,111 @@ let operatorFuncs = dict[
     "*",(function f::s::tail -> s * f :: tail | _ -> []);
     "--",(function f::tail -> -f :: tail | _ -> []);
     "^",(function f::s::tail -> (float s ** float f |> int) :: tail | _ -> []);
-
-
 ]
+
+
+let getExpression() =
+    let rec inFunc =
+        function
+        | (index, node) :: tail ->
+            match box node with 
+            | :? Core.IDefinedToken ->
+                let pn =  parsedNodes.[index]
+                match pn.TokenClassId with
+                | 3 -> inFunc tail @ [ Variable (ref "NaN", pn.Name) ]
+                | 2 -> inFunc tail @ [ Constant (int pn.Name) ]
+                | _ -> inFunc tail @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
+            | _ -> inFunc tail @ [ Undefined (node:>Core.INode).Name ]
+        | _ -> []
+    inFunc polizList
+  
+let getString vars =
+       let rec inFunc str =
+           function
+           | h::tail ->
+               match h with
+               | Operator (o,_) | Undefined o -> 
+                   (inFunc str tail) + o
+               | Variable (_,s) ->
+                   (inFunc str tail) + s
+               | Constant c ->
+                   (inFunc str tail) + (c |> string)
+           | _ -> str
+       inFunc "" vars
 
 let launchWindow() =
     let win = Window()
-
-    //let getExpression() =
-    //    let mutable str = ""
-    //    for (node:int*Core.INode) in polizList
-    //        do
-    //            if snd node :? Core.IDefinedToken
-    //            then
-    //                //let pn = parsedNodes |> List.find (fun x -> x.InStringPosition = fst node)
-    //                let pn = parsedNodes.[fst node]
-    //                str <- str + pn.Name
-    //            else
-    //                str <- str + (snd node).Name
-    //    str
-
-    let getExpression() =
-        let mutable (str:Var list) = []
-        for (node:int*Core.INode) in polizList
-            do
-                if snd node :? Core.IDefinedToken
-                then
-                    //let pn = parsedNodes |> List.find (fun x -> x.InStringPosition = fst node)
-                    let pn = parsedNodes.[fst node]
-                    if pn.TokenClassId = 3 // id
-                    then str <- str @ [ Variable (ref "NaN", pn.Name) ]
-                    elif pn.TokenClassId = 2 // const
-                    then str <- str @ [ Constant (int pn.Name) ]
-                    else str <- str @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
-                else
-                    str <- str @ [ Undefined ((snd node).Name) ]
-        str
-
-    let getString vars =
-        let mutable str = ""
-        for node in vars 
-            do
-                match node with
-                | Operator (o,_) | Undefined o -> 
-                    str <- str + o
-                | Variable (_,s) ->
-                    str <- str + s
-                | Constant c ->
-                    str <- str + (c |> string)
-        str
-
+    let stack = StackPanel()
+    win.Content <- stack
 
 
     let expression = getExpression()
-
-    let res = calculate expression
-
+    let firstResult = calculate expression
     let stringRepresentation = getString expression
 
-    printfn "%A" (stringRepresentation)
-
-    let stack = StackPanel()
-
-    let expressionView = Label(Content = (stringRepresentation))
-
-    let variables = expression |> List.choose (function Variable (value, name) -> Some (value, name) | _ -> None)
-
-    stack.Children.Add expressionView |> ignore
-
-    let resultLabel = Label()
-
-    stack.Children.Add resultLabel |> ignore
-
-    let varFields = 
-        [
-            for e in variables -> 
-                let tb = TextBox(Text = (fst e).Value)
-                tb.TextChanged |> Event.add (fun _ -> fst e := tb.Text; printfn "%A" e; printfn "%A" (calculate expression))
-                stack.Children.Add tb |> ignore
-                
-        ]
+    //printfn "%A" (stringRepresentation)
 
 
 
-    win.Content <- stack
+    // Exression
+    let expressionField = StackPanel(Orientation = Orientation.Horizontal)
+       
+    let expressionLabel = Label(Content = "Expression: ")
+    let expressionContent = Label(Content = stringRepresentation)
 
-    win.Show() |> ignore
+    expressionField.Children.Add expressionLabel |> ignore
+    expressionField.Children.Add expressionContent |> ignore
+
+    stack.Children.Add expressionField |> ignore
+
+
+    // Result
+    let resultField = StackPanel(Orientation = Orientation.Horizontal)
+    
+    let resultLabel = Label(Content = "Result: ")
+    let resultContent = Label(Content = firstResult)
+
+    resultField.Children.Add resultLabel |> ignore
+    resultField.Children.Add resultContent |> ignore
+
+    stack.Children.Add resultField |> ignore
+
+
+    // Variables
+    let variables = 
+        expression 
+        |> List.choose (function Variable (value, name) -> Some (value, name) | _ -> None)
+        |> List.rev
+
+    for (value, name) in variables 
+        do
+            let variableField = StackPanel(Orientation = Orientation.Horizontal)
+        
+            let variableContent = TextBox(Text = (value).Value)
+            let variableLabel = Label(Content = name + ": ")
+
+
+            // TextChanged event
+            let eventHandler _ =
+                value := variableContent.Text
+                resultContent.Content <- calculate expression
+
+            variableContent.TextChanged |> Event.add (eventHandler)
+
+            variableField.Children.Add variableLabel |> ignore
+            variableField.Children.Add variableContent |> ignore
+
+            stack.Children.Add variableField |> ignore
+
+
+
+
+
+    win.ShowDialog() |> ignore
 
 
 
 let poliz (idsToChange:(int*int) list) (nodes:Core.INode list) =
-
     
     let root = nodes |> List.find (fun x -> x.Id = ID)
     let tokens = 
@@ -171,30 +158,11 @@ let poliz (idsToChange:(int*int) list) (nodes:Core.INode list) =
     if tokens |> List.forall ( fun x -> BaseSearching.contains (snd x) root)
     then
         if tokens.Length = 1
-        then
-            polizList <- polizList @ tokens
-    else
+        then polizList <- polizList @ tokens
+    else 
         processed <- processed @ [polizList]
 
         launchWindow()
 
         printfn "%A" polizList
         polizList <- []
-
-    //let root = nodes |> List.find (fun x -> x.Id = ID)
-    //let tokens = 
-    //    idsToChange 
-    //    |> List.choose (fun x -> nodes |> List.tryFind (fun y -> y.Id = snd x && (y :? Core.ITerminal || y :? Core.IDefinedToken)))
-
-    //if tokens |> List.forall ( fun x -> BaseSearching.contains x root)
-    //then
-    //    if tokens.Length = 1
-    //    then
-    //        polizList <- polizList @ tokens
-    //else
-    //    processed <- processed @ [polizList]
-
-    //    launchWindow()
-
-    //    printfn "%A" polizList
-    //    polizList <- []

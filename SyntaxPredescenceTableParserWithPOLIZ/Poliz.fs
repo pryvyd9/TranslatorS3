@@ -31,7 +31,8 @@ let calculate (expressionStack:Member list) =
                 | true, _ -> inFunc (int value.Value :: buffer) tail
                 | _ -> "Unassigned variable " + name
             | Operator (_, func) ->
-                inFunc (func buffer) tail
+                try inFunc (func buffer) tail
+                with e -> e.Message
             | Undefined u ->
                 failwith("undefined member '" + u + "' in expression")
         | _ -> buffer.Head |> string

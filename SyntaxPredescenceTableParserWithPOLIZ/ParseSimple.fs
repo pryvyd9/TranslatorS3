@@ -136,9 +136,7 @@ let check stream table (nodes:Core.INode list) axiom =
                 match basic with
                 | None ->
                     let expected = getExpected (buffer |> List.last) table nodes
-                    //Poliz.poliz nodesToChange nodes
-                    //Poliz.finalize()
-
+                   
                     {
                         errors = [{
                             message = "Unexpected end of file. Expected: " + expected;

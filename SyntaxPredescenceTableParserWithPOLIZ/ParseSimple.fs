@@ -77,7 +77,7 @@ let check stream table (nodes:Core.INode list) axiom =
 
     let mediums = nodeObjects |> List.ofType<Core.IMedium>
 
-    
+    Poliz.clear()
 
     let rec intFunc buffer =
         log buffer nodes

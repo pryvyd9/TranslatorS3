@@ -6,11 +6,13 @@ open System.Windows
 open System.Windows.Controls
 
 let ID = 45
-let mutable processed = []
 
 let mutable parsedNodes:Core.IParsedToken list = []
 
 let mutable polizList:list<int*Core.INode> = []
+
+let clear() =
+    polizList <- []
 
 type Member = 
     | Operator of string*(int list -> int list) 
@@ -161,9 +163,4 @@ let poliz (idsToChange:(int*int) list) (nodes:Core.INode list) =
         if tokens.Length = 1
         then polizList <- polizList @ tokens
     else 
-        processed <- processed @ [polizList]
-
         launchWindow()
-
-        printfn "%A" polizList
-        polizList <- []

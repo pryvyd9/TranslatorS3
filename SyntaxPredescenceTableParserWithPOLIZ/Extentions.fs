@@ -46,19 +46,19 @@ module List =
     //    l
 
     
-    let ranges (func:'a->'b option) (collection:'a list) =
-        let mutable l = []
-        let mutable temp = []
+    //let ranges (func:'a->'b option) (collection:'a list) =
+    //    let mutable l = []
+    //    let mutable temp = []
 
-        for i in collection
-            do
-                match func i with
-                | Some i ->
-                    temp <- temp @ [i]
-                | _ ->
-                    l <- l @ [temp]
-                    temp <- []
+    //    for i in collection
+    //        do
+    //            match func i with
+    //            | Some i ->
+    //                temp <- temp @ [i]
+    //            | _ ->
+    //                l <- l @ [temp]
+    //                temp <- []
                
-        if l.Length = 0
-        then [temp]
-        else l
+    //    if l.Length = 0
+    //    then [temp]
+    //    else l

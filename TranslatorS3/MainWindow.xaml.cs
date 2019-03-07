@@ -65,6 +65,8 @@ namespace TranslatorS3
 
         private void Update()
         {
+            //var watch = System.Diagnostics.Stopwatch.StartNew();
+
             ParserManager.TokenParser.Script = script.Content;
             TokenParserResult = ParserManager.TokenParser.Parse();
 
@@ -73,6 +75,8 @@ namespace TranslatorS3
 
             ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
             SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+            //Console.WriteLine(watch.Elapsed.TotalMilliseconds);
 
             EditorBox.Update();
 
@@ -95,6 +99,7 @@ namespace TranslatorS3
 
         private void InitializeParsers()
         {
+            #region Grammar
             Grammar = new Grammar();
             //Grammar.Load();
             FiniteAutomaton finiteAutomaton = new FiniteAutomaton();
@@ -121,14 +126,14 @@ namespace TranslatorS3
 
             finiteAutomaton.Parse(parser);
             //finiteAutomaton.Save();
-            finiteAutomaton.Load();
+            //finiteAutomaton.Load();
 
 
             SaveGrammarTxt(Grammar);
             SaveGrammarFactorizedTxt(Grammar);
             //Grammar.Save();
 
-
+            #endregion
 
 
             //ParserManager.InitializeParser(
@@ -163,38 +168,38 @@ namespace TranslatorS3
                Grammar.ClassTable);
 
 
-            // Create predescence table
+            #region Predescence
+            //Create predescence table
 
             parser = ParserManager.InitializeParser(
-                "PredescenceTableParser.dll",
-                "PredescenceTableParser.PredescenceTableParser",
-                Grammar.Nodes);
+               "PredescenceTableParser.dll",
+               "PredescenceTableParser.PredescenceTableParser",
+               Grammar.Nodes);
 
             var predescenceTable = new PredescenceTable();
             predescenceTable.Parse(parser);
 
-            //var f = Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit,IEnumerable<IParsedToken>>((x) => ParsedTokens);
             var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
 
-            //new SyntaxPredescenceTableParser.SyntaxPredescenceTableParser(
-            //    predescenceTable.Nodes,
-            //    //() => ParsedTokens,
-            //    f,
-            //    //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Tuple<Microsoft.FSharp.Core.Unit,IEnumerable<IParsedToken>>>(() => ParsedTokens),
-            //    //(Microsoft.FSharp.Core.FSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>) ((Func<IEnumerable<IParsedToken>>)(() => ParsedTokens)),
-            //    Grammar.Nodes
-            //    );
             parser = ParserManager.InitializeParser(
-                "SyntaxPredescenceTableParser.dll",
-                "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
-                predescenceTable.Nodes,
-                f,
-                //Microsoft.FSharp.Core.FuncConvert.ToFSharpFunc<Microsoft.FSharp.Core.Unit, IEnumerable<IParsedToken>>((x) => ParsedTokens),
-                Grammar.Nodes,
-                Grammar.Nodes.Axiom);
+               "SyntaxPredescenceTableParserWithPOLIZ.dll",
+               "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+               predescenceTable.Nodes,
+               f,
+               Grammar.Nodes,
+               Grammar.Nodes.Axiom);
+
+            //parser = ParserManager.InitializeParser(
+            //    "SyntaxPredescenceTableParser.dll",
+            //    "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+            //    predescenceTable.Nodes,
+            //    f,
+            //    Grammar.Nodes,
+            //    Grammar.Nodes.Axiom);
 
             SavePredescenceTableTxt(predescenceTable, Grammar);
 
+            #endregion
         }
 
 

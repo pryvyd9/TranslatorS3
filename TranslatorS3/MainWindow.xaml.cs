@@ -18,6 +18,9 @@ using static System.IO.File;
 using LogView;
 using System.Windows.Threading;
 using System.Timers;
+using ScriptEditor;
+
+using static ScriptEditor.Tag;
 
 namespace TranslatorS3
 {
@@ -34,7 +37,11 @@ namespace TranslatorS3
 
         private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
-        private Script script;
+        //private ScriptEditor.CoolEditor Editor;
+
+        //private Script script;
+
+        private IDocument document;
 
         private readonly Window logWindow;
         private bool shoulCloseLogWindow = false;
@@ -44,44 +51,28 @@ namespace TranslatorS3
         // One second to idle before starting analyzing
         private const int timeToAnalize = 1000;
 
-
+        private bool isTimerAssigned;
+        private IDocument timerAssignedDocument;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            EditorBox.ScriptChanged += EditorBox_ScriptChanged;
-            EditorBox.ParsedTokensGetter = () => ParsedTokens;
-            EditorBox.ErrorsGetter = () => GetErrors();
-            EditorBox.ControlTerminalsGetter = () => Grammar.Nodes.Terminals.Where(n => n.IsControl);
-            EditorBox.TabIndentGetter = () => Configuration.General.TabIndent;
+
+
+            //EditorBox.ScriptChanged += EditorBox_ScriptChanged;
+            //EditorBox.ParsedTokensGetter = () => ParsedTokens;
+            //EditorBox.ErrorsGetter = () => GetErrors();
+            //EditorBox.ControlTerminalsGetter = () => Grammar.Nodes.Terminals.Where(n => n.IsControl);
+            //EditorBox.TabIndentGetter = () => Configuration.General.TabIndent;
 
             logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
             logWindow.Closing += LogWindow_Closing;
 
             timer = new Timer() { AutoReset = false };
-            timer.Elapsed += Timer_Elapsed;
+            //timer.Elapsed += Timer_Elapsed;
         }
 
-        private void Update()
-        {
-            //var watch = System.Diagnostics.Stopwatch.StartNew();
-
-            ParserManager.TokenParser.Script = script.Content;
-            TokenParserResult = ParserManager.TokenParser.Parse();
-
-            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
-            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
-
-            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
-            SemanticParserResult = ParserManager.SemanticParser.Parse();
-
-            //Console.WriteLine(watch.Elapsed.TotalMilliseconds);
-
-            EditorBox.Update();
-
-            ErrorBox.Replace(GetErrors());
-        }
 
         private IEnumerable<IParserError> GetErrors()
         {
@@ -114,6 +105,9 @@ namespace TranslatorS3
 
             Grammar.Parse(parser);
 
+            var controlTerminals = Grammar.Nodes.Terminals.Where(n => n.IsControl).Select(n => n.Name).ToArray();
+
+            ScriptEditor.ApplyTextColor(document, controlTerminals, Color.FromRgb(0, 0, 255));
 
             // Parse finite automaton
 
@@ -214,48 +208,110 @@ namespace TranslatorS3
             }
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            Dispatcher.Invoke(Update, DispatcherPriority.Background);
-        }
-
-        private void EditorBox_ScriptChanged()
-        {
-            if (!timer.Enabled)
-                timer.Start();
-
-            timer.Interval =  timeToAnalize;
-        }
-
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             Configuration.Load();
 
             if(Exists(Configuration.Path.ScriptTxt))
             {
-                script = new Script
+                document = new Document(ReadAllText(Configuration.Path.ScriptTxt))
                 {
-                    Content = ReadAllText(Configuration.Path.ScriptTxt),
-                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\")),
+                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
+                    Path = Configuration.Path.ScriptTxt,
                 };
             }
             else
             {
-                script = new Script
+                document = new Document(ReadAllText(string.Empty))
                 {
-                    Content = string.Empty,
                     Name = "noname",
+                    Path = Configuration.Path.ScriptTxt,
                 };
             }
 
             InitializeParsers();
 
-            EditorBox.SetDocument(script);
+            document.Updated += Document_Updated;
+
+            ScriptEditor.OpenDocument(document);
+
+            ScriptEditor.Focus(document);
+
+            Document_Updated(document);
+        }
+
+
+        private void Update(IDocument document)
+        {
+            ParserManager.TokenParser.Script = document.Text;
+            TokenParserResult = ParserManager.TokenParser.Parse();
+
+            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
+            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
+
+            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
+            SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+
+
+            var errors = GetErrors();
+            
+
+            var semanticErrors = errors
+               .Where(n => n.Tag == "semantic")
+               .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+               .ToArray();
+
+            var syntaxErrors = errors
+                .Where(n => n.Tag == "syntax")
+                .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+                .ToArray();
+
+            var lexicalErrors = errors
+               .Where(n => n.Tag == "lexical")
+               .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+               .ToArray();
+
+            document.ResetFormat();
+
+            document.ApplyHighlight(semanticErrors, new[] { Semantic }, Brushes.GreenYellow);
+
+            document.ApplyHighlight(syntaxErrors, new[] { Syntax }, Brushes.OrangeRed);
+
+            document.ApplyHighlight(lexicalErrors, new[] { Lexical }, Brushes.Violet);
+
+            ErrorPanel.ReplaceErrors(document, errors);
+
+            //ErrorBox.Replace(errors);
+        }
+
+        private void Document_Updated(IDocument document)
+        {
+            if (!timer.Enabled)
+                timer.Start();
+
+            timer.Interval = timeToAnalize;
+
+            if (!isTimerAssigned && timerAssignedDocument != document)
+            {
+                timer.Elapsed += (sender, e) =>
+                {
+                    Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+                };
+                isTimerAssigned = true;
+                timerAssignedDocument = document;
+            }
+          
+        }
+
+        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            Save(Configuration.Path.ScriptTxt, script.Content);
+            Save(Configuration.Path.ScriptTxt, document.Text);
 
             var errors = GetErrors().GroupBy(n => n.Tag).Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
 

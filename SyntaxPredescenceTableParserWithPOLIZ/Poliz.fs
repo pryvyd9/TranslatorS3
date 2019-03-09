@@ -123,6 +123,12 @@ let launchWindow() =
         |> List.choose (function Variable (value, name) -> Some (value, name) | _ -> None)
         |> List.rev
 
+    //let duplicateVariables = variables |> List.groupBy (fun x -> snd x)
+
+    //duplicateVariables |> List.iter(fun group -> snd group |> List.iter(fun v -> fst v <-  fst (snd group).Head))
+
+    //fst (snd duplicateVariables.[1]).[1] := "here"
+
     for (value, name) in variables 
         do
             let variableField = StackPanel(Orientation = Orientation.Horizontal)

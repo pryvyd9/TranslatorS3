@@ -41,12 +41,18 @@ let calculate (expressionStack:Member list) =
     inFunc [] (expressionStack |> List.rev) 
 
 let operatorFuncs = dict[
-    "+",(function f::s::tail -> s + f :: tail | _ -> []);
-    "-",(function f::s::tail -> s - f :: tail | _ -> []);
-    "/",(function f::s::tail -> s / f :: tail | _ -> []);
-    "*",(function f::s::tail -> s * f :: tail | _ -> []);
-    "--",(function f::tail -> -f :: tail | _ -> []);
-    "^",(function f::s::tail -> (float s ** float f |> int) :: tail | _ -> []);
+    "+",  (function f::s::tail -> s + f :: tail | _ -> []);
+    "-",  (function f::s::tail -> s - f :: tail | _ -> []);
+    "/",  (function f::s::tail -> s / f :: tail | _ -> []);
+    "*",  (function f::s::tail -> s * f :: tail | _ -> []);
+    "--", (function f::tail    -> -f    :: tail | _ -> []);
+    "^",  (function f::s::tail -> (float s ** float f |> int) :: tail | _ -> []);
+    "<",  (function f::s::tail -> (if s <  f then 1 else 0)   :: tail | _ -> []);
+    ">",  (function f::s::tail -> (if s >  f then 1 else 0)   :: tail | _ -> []);
+    "<=", (function f::s::tail -> (if s <= f then 1 else 0)   :: tail | _ -> []);
+    ">=", (function f::s::tail -> (if s >= f then 1 else 0)   :: tail | _ -> []);
+    "==", (function f::s::tail -> (if s =  f then 1 else 0)   :: tail | _ -> []);
+    "!=", (function f::s::tail -> (if s <> f then 1 else 0)   :: tail | _ -> []);
 ]
 
 
@@ -168,5 +174,5 @@ let poliz (idsToChange:(int*int) list) (nodes:Core.INode list) =
     then
         if tokens.Length = 1
         then polizList <- polizList @ tokens
-    else 
-        launchWindow()
+    elif polizList.Length > 0
+    then launchWindow()

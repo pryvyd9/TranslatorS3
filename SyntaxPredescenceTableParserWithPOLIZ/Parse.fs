@@ -14,11 +14,12 @@ type SyntaxPredescenceTableParser(
 
         let tokens = tokenSelector.Invoke()
 
-        Poliz.parsedNodes <- tokens |> List.ofSeq
 
         if tokens = null
         then {errors = []; position = None} :> Core.IParserResult
         else
+            Poliz.parsedNodes <- tokens |> List.ofSeq
+
             let stream = 
                 tokens 
                 |> List.ofSeq 

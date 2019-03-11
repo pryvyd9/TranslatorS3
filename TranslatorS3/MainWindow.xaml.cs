@@ -246,6 +246,13 @@ namespace TranslatorS3
             ParserManager.TokenParser.Script = document.Text;
             TokenParserResult = ParserManager.TokenParser.Parse();
 
+            if (ParsedTokens == null)
+            {
+                ErrorPanel.ReplaceErrors(document, new IParserError[] { });
+
+                return;
+            }
+            
             ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
             SyntaxParserResult = ParserManager.SyntaxParser.Parse();
 
@@ -272,7 +279,8 @@ namespace TranslatorS3
                .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
                .ToArray();
 
-            document.ResetFormat();
+            document.ResetHighlight();
+            //document.ResetFormat();
 
             document.ApplyHighlight(semanticErrors, new[] { Semantic }, Brushes.GreenYellow);
 
@@ -304,10 +312,7 @@ namespace TranslatorS3
           
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
+        
 
         private void Window_Closed(object sender, EventArgs e)
         {

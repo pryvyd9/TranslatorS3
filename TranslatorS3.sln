@@ -38,6 +38,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptEditor", "..\ScriptEd
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorPanel", "ErrorPanel\ErrorPanel.csproj", "{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PolizParser", "PolizParser\PolizParser.fsproj", "{0326C908-3142-4F22-845E-785466DA6AB8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -104,6 +106,10 @@ Global
 		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

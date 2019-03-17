@@ -64,9 +64,9 @@ let getExpression() =
             | :? Core.IDefinedToken ->
                 let pn =  parsedNodes.[index]
                 match pn.TokenClassId with
-                | 3 -> inFunc tail @ [ Variable (ref "NaN", pn.Name) ]
+                | 0 -> inFunc tail @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
+                | 1 -> inFunc tail @ [ Variable (ref "NaN", pn.Name) ]
                 | 2 -> inFunc tail @ [ Constant (int pn.Name) ]
-                | _ -> inFunc tail @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
             | _ -> inFunc tail @ [ Undefined (node:>Core.INode).Name ]
         | _ -> []
     inFunc polizList

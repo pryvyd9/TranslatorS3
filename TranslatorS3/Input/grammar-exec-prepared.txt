@@ -1,4 +1,4 @@
-﻿<op.list>::=<op>;<op.list>|<op>;
+﻿<op.list>::=<op>;<op.list>|<op>;|^
 <op>::=<while>|<if>|<op0>|{<op.list>}|<goto>|<io>
 <while>::=while|<op0>do<op>
 <op0>::=<id>=<op0>|<op1>

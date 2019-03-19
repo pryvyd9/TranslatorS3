@@ -76,7 +76,7 @@ namespace SemanticParser
 
             rootScope.Stream = rootStream;
 
-           CheckIdentifiers(rootStream, rootScope);
+           CheckIdentifiers(rootScope);
 
             //CheckIdentifiers();
 
@@ -492,25 +492,6 @@ namespace SemanticParser
         #endregion
 
 
-        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream)
-        {
-            foreach (var node in stream.Tokens)
-            {
-                yield return node;
-
-                if (node is IStatement st)
-                {
-                    foreach (var innerStream in st.Streams)
-                    {
-                        foreach (var innerNodes in GetConsistentStream(innerStream))
-                        {
-                            yield return innerNodes;
-                        }
-                    }
-                }
-            }
-        }
-
         private void CheckUndefined()
         {
             // Check Undefined lexems
@@ -613,12 +594,14 @@ namespace SemanticParser
             return nodes.First(n => n.Id == id);
         }
 
-        private void CheckIdentifiers(IExecutionStream rootStream, IScope rootScope)
+        private void CheckIdentifiers(IScope rootScope)
         {
             var declaredVariables = new List<IVariable>();
 
             // Level all streams to one.
-            var allNodes = GetConsistentStream(rootStream).ToList();
+            var allNodes = rootScope.GetConsistentStream().ToList();
+
+            var variableErrors= new Dictionary<IParsedToken, string>();
 
             for (int i = 0; i < allNodes.Count; i++)
             {
@@ -678,6 +661,8 @@ namespace SemanticParser
                                 string message = $"Attempt to use variable {parsedToken.Name} in its own declaration" +
                                                  $" at ({parsedToken.RowIndex + 1};{parsedToken.InRowPosition + 1}).";
 
+                                variableErrors.Add(parsedToken, message);
+
                                 AddError(parsedToken, message);
                             }
                         }
@@ -698,11 +683,14 @@ namespace SemanticParser
                         // Variable used before it was assigned.
                         //var parsedToken = ParsedTokens.First(n => n.InStringPosition == variable.InStringPosition);
 
-                        var parsedToken =  ParsedTokens.ElementAt(allNodes.IndexOf(variable));
+                        var parsedToken =  ParsedTokens.ElementAt(i);
 
 
                         string message = $"Attempt to use an unassigned variable {parsedToken.Name}" +
                                          $" at ({parsedToken.RowIndex + 1};{parsedToken.InRowPosition + 1}).";
+
+                        variableErrors.Add(parsedToken, message);
+
 
                         AddError(parsedToken, message);
 
@@ -719,19 +707,6 @@ namespace SemanticParser
                     TokensOnError = new List<IParsedToken> { instance },
                 });
             }
-
-            //void AddError(IParsedToken instance)
-            //{
-            //    string message = $"Attempt to use an unassigned" +
-            //                     $" variable {instance.Name} at ({instance.RowIndex + 1};{instance.InRowPosition + 1}).";
-
-            //    errors.Add(new SemanticParserError
-            //    {
-            //        Tag = "semantic",
-            //        Message = message,
-            //        TokensOnError = new List<IParsedToken> { instance },
-            //    });
-            //}
 
         }
 

@@ -79,7 +79,7 @@ cta=case terminal array(only one symbol terminals)-->
                                               <t exec-class="operator">^</t>
                                               <d name="op8">
                                                 <c>
-                                                  <t exec-class="operator">--</t>
+                                                  <t exec-class="operator">-</t>
                                                   <d name="op9">
                                                     <c>
                                                       <t exec-class="delimiter">(</t>

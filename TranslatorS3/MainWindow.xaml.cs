@@ -269,7 +269,7 @@ namespace TranslatorS3
 
             var syntaxErrors = errors
                 .Where(n => n.Tag == "syntax")
-                .SelectMany(n => n.TokensOnError?.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+                .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
                 .ToArray();
 
             var lexicalErrors = errors

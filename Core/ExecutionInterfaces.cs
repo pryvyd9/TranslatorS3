@@ -28,6 +28,7 @@ namespace Core
         IList<IVariable> Variables { get; }
         IList<IScope> ChildrenScopes { get; }
         IExecutionStream Stream { get; }
+        IEnumerable<IExecutionStreamNode> GetConsistentStream();
     }
 
     public interface IVariable : IExecutionStreamNode

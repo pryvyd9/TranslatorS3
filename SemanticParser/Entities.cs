@@ -40,6 +40,30 @@ namespace SemanticParser
         public IList<IVariable> Variables { get; set; }
         public IList<IScope> ChildrenScopes { get; set; }
         public IExecutionStream Stream { get; set; }
+
+        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream)
+        {
+            foreach (var node in stream.Tokens)
+            {
+                yield return node;
+
+                if (node is IStatement st)
+                {
+                    foreach (var innerStream in st.Streams)
+                    {
+                        foreach (var innerNodes in GetConsistentStream(innerStream))
+                        {
+                            yield return innerNodes;
+                        }
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<IExecutionStreamNode> GetConsistentStream()
+        {
+            return GetConsistentStream(Stream);
+        }
     }
 
     class Variable : ExecutionNode, IVariable

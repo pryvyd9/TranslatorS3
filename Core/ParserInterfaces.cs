@@ -55,7 +55,12 @@ namespace Core
 
     #region Semantic Parser
 
-    public interface ISemanticParser : IParser<IParserResult>
+    public interface ISemanticParserResult : IParserResult
+    {
+        IScope RootScope { get; }
+    }
+
+    public interface ISemanticParser : IParser<ISemanticParserResult>
     {
         IEnumerable<IParsedToken> ParsedTokens { set; }
     }

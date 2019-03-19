@@ -38,7 +38,9 @@
     <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FSharp.Core, Version=4.6.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="FSharp.Core, Version=4.6.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\FSharp.Core.4.6.2\lib\net45\FSharp.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -61,7 +63,6 @@
     </ApplicationDefinition>
     <Compile Include="Entities\PredescenceTable.cs" />
     <Compile Include="Entities\PushdownAutomaton.cs" />
-    <Compile Include="Entities\Script.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -99,6 +100,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -117,6 +119,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\ScriptEditor\ScriptEditor\ScriptEditor.csproj">
+      <Project>{282ef98c-b35e-43e8-89cc-37a94ae2a7f3}</Project>
+      <Name>ScriptEditor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ConfigView\ConfigView.csproj">
       <Project>{ccc58e70-2e48-4d5d-8c0e-25b76c015730}</Project>
       <Name>ConfigView</Name>
@@ -125,9 +131,9 @@
       <Project>{dd1e2d8f-60dd-4854-bce2-6e9db5c3df2f}</Project>
       <Name>Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Editor\Editor.csproj">
-      <Project>{52a9d6ca-ecce-4f03-902c-1923e67e9e47}</Project>
-      <Name>Editor</Name>
+    <ProjectReference Include="..\ErrorPanel\ErrorPanel.csproj">
+      <Project>{ceef88d4-c7e9-449a-8e81-1822ffe163db}</Project>
+      <Name>ErrorPanel</Name>
     </ProjectReference>
     <ProjectReference Include="..\GrammarParser\GrammarParser.csproj">
       <Project>{e3447cf4-b75c-4445-8cf5-e10d18945291}</Project>
@@ -152,24 +158,25 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Input\grammar-fixed - Copy %282%29.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Input\grammar-fixed - Copy %283%29.xml">
+    <None Include="Input\grammar-fixed-reversed.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Input\grammar-fixed - Copy %284%29.xml">
+    <None Include="Input\grammar-fixed-exec-prepared.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Input\grammar-fixed - Copy %282%29 - Copy.xml">
+    </None>
+    <None Include="Input\grammar-exec-prepared.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
+    </None>
+    <None Include="Input\grammar-exec-prepared.txt">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Content Include="Input\grammar-original.txt">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

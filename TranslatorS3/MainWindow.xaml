@@ -4,7 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TranslatorS3"
-        xmlns:editor="clr-namespace:Editor;assembly=Editor"
+        xmlns:scriptEditor="clr-namespace:ScriptEditor;assembly=ScriptEditor"
+        xmlns:errorPanel="clr-namespace:ErrorPanel;assembly=ErrorPanel"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
         Loaded="Window_Loaded" Closed="Window_Closed"
@@ -27,11 +28,12 @@
             <MenuItem Header="Logger" Click="ShowLogger_Click"/>
         </Menu>
 
-        <editor:ScriptEditor Name="EditorBox" Grid.Row="1"/>
+        <scriptEditor:CoolEditor Name="ScriptEditor" Grid.Row="1"/>
+        
 
         <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="3" Background="Black"/>
 
-        <editor:ErrorBox Name="ErrorBox" Grid.Row="3"/>
+        <errorPanel:ErrorPanel Name="ErrorPanel" Grid.Row="3"/>
 
     </Grid>
 </Window>

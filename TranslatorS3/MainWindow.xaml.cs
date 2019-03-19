@@ -18,6 +18,9 @@ using static System.IO.File;
 using LogView;
 using System.Windows.Threading;
 using System.Timers;
+using ScriptEditor;
+
+using static ScriptEditor.Tag;
 
 namespace TranslatorS3
 {
@@ -30,54 +33,43 @@ namespace TranslatorS3
 
         private ITokenParserResult TokenParserResult { get; set; }
         private IParserResult SyntaxParserResult { get; set; }
-        private IParserResult SemanticParserResult { get; set; }
+        private ISemanticParserResult SemanticParserResult { get; set; }
 
         private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
-        private Script script;
+
+        private IDocument document;
 
         private readonly Window logWindow;
-        private bool shoulCloseLogWindow = false;
+        private bool shouldCloseLogWindow = false;
 
         private readonly Timer timer;
 
         // One second to idle before starting analyzing
-        private const int timeToAnalize = 1000;
+        private const int TimeToAnalyze = 1000;
 
-
+        private bool isTimerAssigned;
+        private IDocument timerAssignedDocument;
 
         public MainWindow()
         {
             InitializeComponent();
 
-            EditorBox.ScriptChanged += EditorBox_ScriptChanged;
-            EditorBox.ParsedTokensGetter = () => ParsedTokens;
-            EditorBox.ErrorsGetter = () => GetErrors();
-            EditorBox.ControlTerminalsGetter = () => Grammar.Nodes.Terminals.Where(n => n.IsControl);
-            EditorBox.TabIndentGetter = () => Configuration.General.TabIndent;
+
+
+            //EditorBox.ScriptChanged += EditorBox_ScriptChanged;
+            //EditorBox.ParsedTokensGetter = () => ParsedTokens;
+            //EditorBox.ErrorsGetter = () => GetErrors();
+            //EditorBox.ControlTerminalsGetter = () => Grammar.Nodes.Terminals.Where(n => n.IsControl);
+            //EditorBox.TabIndentGetter = () => Configuration.General.TabIndent;
 
             logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
             logWindow.Closing += LogWindow_Closing;
 
             timer = new Timer() { AutoReset = false };
-            timer.Elapsed += Timer_Elapsed;
+            //timer.Elapsed += Timer_Elapsed;
         }
 
-        private void Update()
-        {
-            ParserManager.TokenParser.Script = script.Content;
-            TokenParserResult = ParserManager.TokenParser.Parse();
-
-            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
-            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
-
-            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
-            SemanticParserResult = ParserManager.SemanticParser.Parse();
-
-            EditorBox.Update();
-
-            ErrorBox.Replace(GetErrors());
-        }
 
         private IEnumerable<IParserError> GetErrors()
         {
@@ -98,7 +90,7 @@ namespace TranslatorS3
             #region Grammar
             Grammar = new Grammar();
             //Grammar.Load();
-            FiniteAutomaton finiteAutomaton = new FiniteAutomaton();
+            var finiteAutomaton = new FiniteAutomaton();
 
             dynamic parser = ParserManager.InitializeParser(
                 "GrammarParser.dll",
@@ -110,6 +102,9 @@ namespace TranslatorS3
 
             Grammar.Parse(parser);
 
+            var controlTerminals = Grammar.Nodes.Terminals.Where(n => n.IsControl).Select(n => n.Name).ToArray();
+
+            ScriptEditor.ApplyTextColor(document, controlTerminals, Color.FromRgb(0, 0, 255));
 
             // Parse finite automaton
 
@@ -122,7 +117,7 @@ namespace TranslatorS3
 
             finiteAutomaton.Parse(parser);
             //finiteAutomaton.Save();
-            finiteAutomaton.Load();
+            //finiteAutomaton.Load();
 
 
             SaveGrammarTxt(Grammar);
@@ -132,12 +127,12 @@ namespace TranslatorS3
             #endregion
 
 
-            //ParserManager.InitializeParser(
-            //    "SyntaxRecursiveParser.dll",
-            //    "SyntaxRecursiveParser.SyntaxRecursiveParser",
-            //    true,
-            //    Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
-            //    Grammar.Nodes.Axiom);
+            ParserManager.InitializeParser(
+                "SyntaxRecursiveParser.dll",
+                "SyntaxRecursiveParser.SyntaxRecursiveParser",
+                true,
+                Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
+                Grammar.Nodes.Axiom);
 
             //PushdownAutomaton pushdownAutomaton = new PushdownAutomaton();
             //pushdownAutomaton.Load();
@@ -161,31 +156,40 @@ namespace TranslatorS3
             ParserManager.InitializeParser(
                "SemanticParser.dll",
                "SemanticParser.SemanticParser",
-               Grammar.ClassTable);
+               Grammar.ClassTable,
+               Grammar.Nodes);
 
 
             #region Predescence
-            // Create predescence table
+            //Create predescence table
 
-            parser = ParserManager.InitializeParser(
-                "PredescenceTableParser.dll",
-                "PredescenceTableParser.PredescenceTableParser",
-                Grammar.Nodes);
+            //parser = ParserManager.InitializeParser(
+            //   "PredescenceTableParser.dll",
+            //   "PredescenceTableParser.PredescenceTableParser",
+            //   Grammar.Nodes);
 
-            var predescenceTable = new PredescenceTable();
-            predescenceTable.Parse(parser);
+            //var predescenceTable = new PredescenceTable();
+            //predescenceTable.Parse(parser);
 
-            var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
+            //var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
 
-            parser = ParserManager.InitializeParser(
-                "SyntaxPredescenceTableParser.dll",
-                "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
-                predescenceTable.Nodes,
-                f,
-                Grammar.Nodes,
-                Grammar.Nodes.Axiom);
+            //parser = ParserManager.InitializeParser(
+            //   "SyntaxPredescenceTableParserWithPOLIZ.dll",
+            //   "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+            //   predescenceTable.Nodes,
+            //   f,
+            //   Grammar.Nodes,
+            //   Grammar.Nodes.Axiom);
 
-            SavePredescenceTableTxt(predescenceTable, Grammar);
+            //parser = ParserManager.InitializeParser(
+            //    "SyntaxPredescenceTableParser.dll",
+            //    "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+            //    predescenceTable.Nodes,
+            //    f,
+            //    Grammar.Nodes,
+            //    Grammar.Nodes.Axiom);
+
+            //SavePredescenceTableTxt(predescenceTable, Grammar);
 
             #endregion
         }
@@ -195,24 +199,11 @@ namespace TranslatorS3
 
         private void LogWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (!shoulCloseLogWindow)
+            if (!shouldCloseLogWindow)
             {
                 e.Cancel = true;
                 (sender as Window).Hide();
             }
-        }
-
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            Dispatcher.Invoke(Update, DispatcherPriority.Background);
-        }
-
-        private void EditorBox_ScriptChanged()
-        {
-            if (!timer.Enabled)
-                timer.Start();
-
-            timer.Interval =  timeToAnalize;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -221,37 +212,119 @@ namespace TranslatorS3
 
             if(Exists(Configuration.Path.ScriptTxt))
             {
-                script = new Script
+                document = new Document(ReadAllText(Configuration.Path.ScriptTxt))
                 {
-                    Content = ReadAllText(Configuration.Path.ScriptTxt),
-                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\")),
+                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
+                    Path = Configuration.Path.ScriptTxt,
                 };
             }
             else
             {
-                script = new Script
+                document = new Document(ReadAllText(string.Empty))
                 {
-                    Content = string.Empty,
                     Name = "noname",
+                    Path = Configuration.Path.ScriptTxt,
                 };
             }
 
             InitializeParsers();
 
-            EditorBox.SetDocument(script);
+            document.Updated += Document_Updated;
+
+            ScriptEditor.OpenDocument(document);
+
+            ScriptEditor.Focus(document);
+
+            Document_Updated(document);
         }
+
+
+        private void Update(IDocument document)
+        {
+            ParserManager.TokenParser.Script = document.Text;
+            TokenParserResult = ParserManager.TokenParser.Parse();
+
+            if (ParsedTokens == null)
+            {
+                ErrorPanel.ReplaceErrors(document, new IParserError[] { });
+
+                return;
+            }
+            
+            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
+            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
+
+            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
+            SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+
+
+            var errors = GetErrors().ToArray();
+            
+
+            var semanticErrors = errors
+               .Where(n => n.Tag == "semantic")
+               .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+               .ToArray();
+
+            var syntaxErrors = errors
+                .Where(n => n.Tag == "syntax")
+                .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+                .ToArray();
+
+            var lexicalErrors = errors
+               .Where(n => n.Tag == "lexical")
+               .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+               .ToArray();
+
+            document.ResetHighlight();
+            //document.ResetFormat();
+
+            document.ApplyHighlight(semanticErrors, new[] { Semantic }, Brushes.GreenYellow);
+
+            document.ApplyHighlight(syntaxErrors, new[] { Syntax }, Brushes.OrangeRed);
+
+            document.ApplyHighlight(lexicalErrors, new[] { Lexical }, Brushes.Violet);
+
+            ErrorPanel.ReplaceErrors(document, errors);
+
+            //ErrorBox.Replace(errors);
+        }
+
+        private void Document_Updated(IDocument document)
+        {
+            if (!timer.Enabled)
+                timer.Start();
+
+            timer.Interval = TimeToAnalyze;
+
+            if (isTimerAssigned || timerAssignedDocument == document) return;
+
+            timer.Elapsed += (sender, e) =>
+            {
+                Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+            };
+            isTimerAssigned = true;
+            timerAssignedDocument = document;
+
+        }
+
+        
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            Save(Configuration.Path.ScriptTxt, script.Content);
+            Save(Configuration.Path.ScriptTxt, document.Text);
 
-            var errors = GetErrors().GroupBy(n => n.Tag).Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
+            if (SyntaxParserResult != null)
+            {
+                var errors = GetErrors().GroupBy(n => n.Tag).Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
 
-            Save(Configuration.Path.ErrorsTxt, string.Join("\r\n\r\n", errors));
+                Save(Configuration.Path.ErrorsTxt, string.Join("\r\n\r\n", errors));
+            }
 
             SaveParsedTokensTxt(TokenParserResult);
 
-            shoulCloseLogWindow = true;
+            shouldCloseLogWindow = true;
 
             logWindow.Close();
 
@@ -435,11 +508,16 @@ namespace TranslatorS3
             }
         }
 
-        private static void SaveParsedTokensTxt(ITokenParserResult TokenParserResult)
+        private static void SaveParsedTokensTxt(ITokenParserResult tokenParserResult)
         {
             Configuration.CreateDirectoryFromPath(Configuration.Path.ParsedNodesDirectory);
 
-            var tables = TokenParserResult.ParsedTokens.Distinct(n=>n.Name).GroupBy(n => n.TokenClassId);
+            if (tokenParserResult.ParsedTokens is null || !tokenParserResult.ParsedTokens.Any())
+            {
+                return;
+            }
+
+            var tables = tokenParserResult.ParsedTokens.Distinct(n=>n.Name).GroupBy(n => n.TokenClassId);
 
             IDictionary<string,int> GetTable(int classId)
             {
@@ -448,7 +526,7 @@ namespace TranslatorS3
 
             try
             {
-                var parsedNodes = TokenParserResult.ParsedTokens.Select((n, i) => $"{i,4} {n.Name,-10} {n.TokenClassId,2} " +
+                var parsedNodes = tokenParserResult.ParsedTokens.Select((n, i) => $"{i,4} {n.Name,-10} {n.TokenClassId,2} " +
                     $"{GetTable(n.TokenClassId)[n.Name]}");
 
                 var identifiers = GetTable(1).Select(n => $"{n.Value,4} {n.Key}");

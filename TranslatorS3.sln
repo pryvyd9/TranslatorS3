@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrammarParser", "GrammarPar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigView", "ConfigView\ConfigView.csproj", "{CCC58E70-2E48-4D5D-8C0E-25B76C015730}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Editor", "Editor\Editor.csproj", "{52A9D6CA-ECCE-4F03-902C-1923E67E9E47}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FiniteAutomatonParser", "FiniteAutomatonParser\FiniteAutomatonParser.csproj", "{17622ACF-01F5-438D-9EB6-31463A228ADA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SyntaxRecursiveParser", "SyntaxRecursiveParser\SyntaxRecursiveParser.csproj", "{5F04770C-681D-471E-8C76-71EDC6F1F02D}"
@@ -28,6 +26,19 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogView", "LogView\LogView.csproj", "{5AD395B2-A271-4F88-868D-60A4C2465E9B}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SyntaxPredescenceTableParser", "SyntaxPredescenceTableParser\SyntaxPredescenceTableParser.fsproj", "{73A695FE-3B52-4AF7-8639-58FB700E91FC}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SyntaxPredescenceTableParserWithPOLIZ", "SyntaxPredescenceTableParserWithPOLIZ\SyntaxPredescenceTableParserWithPOLIZ.fsproj", "{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0CBD2833-AE16-4116-98EE-A2BABBBCAFEE}"
+	ProjectSection(SolutionItems) = preProject
+		..\ScriptEditor\ScriptEditor\ScriptEditor.csproj = ..\ScriptEditor\ScriptEditor\ScriptEditor.csproj
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptEditor", "..\ScriptEditor\ScriptEditor\ScriptEditor.csproj", "{282EF98C-B35E-43E8-89CC-37A94AE2A7F3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorPanel", "ErrorPanel\ErrorPanel.csproj", "{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PolizParser", "PolizParser\PolizParser.fsproj", "{0326C908-3142-4F22-845E-785466DA6AB8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,10 +62,6 @@ Global
 		{CCC58E70-2E48-4D5D-8C0E-25B76C015730}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCC58E70-2E48-4D5D-8C0E-25B76C015730}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CCC58E70-2E48-4D5D-8C0E-25B76C015730}.Release|Any CPU.Build.0 = Release|Any CPU
-		{52A9D6CA-ECCE-4F03-902C-1923E67E9E47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{52A9D6CA-ECCE-4F03-902C-1923E67E9E47}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{52A9D6CA-ECCE-4F03-902C-1923E67E9E47}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{52A9D6CA-ECCE-4F03-902C-1923E67E9E47}.Release|Any CPU.Build.0 = Release|Any CPU
 		{17622ACF-01F5-438D-9EB6-31463A228ADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{17622ACF-01F5-438D-9EB6-31463A228ADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{17622ACF-01F5-438D-9EB6-31463A228ADA}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -87,6 +94,22 @@ Global
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73A695FE-3B52-4AF7-8639-58FB700E91FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA445AA7-DA5B-4451-93A7-4B6EEB0DE40B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{282EF98C-B35E-43E8-89CC-37A94AE2A7F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{282EF98C-B35E-43E8-89CC-37A94AE2A7F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{282EF98C-B35E-43E8-89CC-37A94AE2A7F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{282EF98C-B35E-43E8-89CC-37A94AE2A7F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Core;
 using System.Xml.Linq;
@@ -645,58 +646,63 @@ namespace GrammarParser
             switch (element.Name.LocalName)
             {
                 case "d":
+                {
+                    var name = element.Attribute("name").Value;
+
+                    // If node is symbol class
+                    if (element.Attribute("symbol-class") != null)
                     {
-                        // If node is symbol class
-                        if (element.Attribute("symbol-class") != null)
+                        var node = new Class
                         {
-                            var node = new Class
-                            {
-                                Name = element.Attribute("name").Value,
-                                SymbolClass = element.Attribute("symbol-class").Value,
-                                Symbols = element.Element("cta").Value,
-                            };
+                            Name = name,
+                            SymbolClass = element.Attribute("symbol-class").Value,
+                            Symbols = element.Element("cta").Value,
+                        };
 
-                            nodes.Add(node);
+                        nodes.Add(node);
 
-                            return node;
-                        }
-
-                        // If node is token
-                        else if (element.Attribute("token-class") != null)
-                        {
-                            var node = new DefinedToken
-                            {
-                                Name = element.Attribute("name").Value,
-                                TokenClass = element.Attribute("token-class").Value,
-                            };
-
-                            nodes.Add(node);
-
-                            node.Cases = ParseCases(element, true);
-
-                            return node;
-                        }
-
-                        // If node is medium
-                        else
-                        {
-                            var node = new Medium
-                            {
-                                Name = element.Attribute("name").Value,
-                            };
-
-                            nodes.Add(node);
-
-                            node.Cases = ParseCases(element, false);
-
-                            return node;
-                        }
+                        return node;
                     }
+
+                    // If node is token
+                    else if (element.Attribute("token-class") != null)
+                    {
+                        string execClass = element.Attribute("exec-class")?.Value;
+
+                        var node = new DefinedToken
+                        {
+                            Name = name,
+                            TokenClass = element.Attribute("token-class").Value,
+                            ExecuteStreamNodeType = execClass,
+                        };
+
+                        nodes.Add(node);
+
+                        node.Cases = ParseCases(element, true);
+
+                        return node;
+                    }
+
+                    // If node is medium
+                    else
+                    {
+                        var node = new Medium
+                        {
+                            Name = name,
+                        };
+
+                        nodes.Add(node);
+
+                        node.Cases = ParseCases(element, false);
+
+                        return node;
+                    }
+                }
                 case "n":
                     {
                         string name = element.Value;
 
-                        if (!nodes.OfType<INonterminal>().Any(n => n.Name == name))
+                        if (nodes.OfType<INonterminal>().All(n => n.Name != name))
                         {
                             throw new Exception($"Node {name} was referenced before it was defined");
                         }
@@ -706,16 +712,42 @@ namespace GrammarParser
                 case "t":
                     {
                         string name = element.Value;
+                        string execClass = element.Attribute("exec-class")?.Value ?? string.Empty;
+
+                        string[] streamers = element.Attribute("streamers")?.Value.Split('|') ?? new string[0];
+                        string[] breakers = element.Attribute("breakers")?.Value.Split('|') ?? new string[0];
+
+                        bool isStreamMaxCountSet = int.TryParse(element.Attribute("stream-max-count")?.Value,
+                            out int streamMaxCount);
 
                         if (nodes.OfType<ITerminal>().Any(n => n.Name == name))
                         {
-                            return (Node)nodes.OfType<ITerminal>().Single(n => n.Name == name);
+                            var node1 = (Node)nodes.OfType<ITerminal>().Single(n => n.Name == name);
+
+                            if (!string.IsNullOrEmpty(execClass))
+                            {
+                                if (!string.IsNullOrEmpty(node1.ExecuteStreamNodeType) 
+                                    && node1.ExecuteStreamNodeType != execClass)
+                                {
+                                    throw new Exception("Attempt to assign two different execute stream node types.");
+                                }
+
+                                node1.ExecuteStreamNodeType = execClass;
+                            }
+
+
+                            return node1;
                         }
 
                         Terminal node = new Terminal
                         {
                             Name = name,
                             TokenClass = unclassifiedTokenClassName,
+                            ExecuteStreamNodeType = execClass,
+                            Streamers = streamers,
+                            Breakers = breakers,
+                            IsStreamMaxCountSet = isStreamMaxCountSet,
+                            StreamMaxCount = streamMaxCount,
                         };
 
 

@@ -7,10 +7,11 @@ using Core;
 
 namespace SemanticParser
 {
-    class SemanticParserResult : IParserResult
+    class SemanticParserResult : ISemanticParserResult
     {
         public IEnumerable<IParserError> Errors { get; internal set; }
 
+        public IScope RootScope { get; internal set; }
     }
 
     class SemanticParserError : IParserError
@@ -38,6 +39,7 @@ namespace SemanticParser
         public IScope ParentScope { get; set; }
         public IList<IVariable> Variables { get; set; }
         public IList<IScope> ChildrenScopes { get; set; }
+        public IExecutionStream Stream { get; set; }
     }
 
     class Variable : ExecutionNode, IVariable

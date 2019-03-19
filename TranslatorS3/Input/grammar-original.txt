@@ -1,4 +1,4 @@
-﻿<op.list>::=<op>;<op.list>|<op>;
+﻿<op.list>::=<op>;<op.list>|<op>;|^
 <op>::=<while>|<if>|<op0>|{<op.list>}|<goto>|<io>
 <while>::=while|<op0>do<op>
 <op0>::=<id>=<op0>|<op1>
@@ -18,7 +18,7 @@
 <head>::=_|a|..|Z
 <tail>::=<head><tail>|<digit><tail>|<head>|<digit>
 <digit>::=0|..|9
-<if>::=if<op0>?<op>:<op>
+<if>::=if<op0>?<op>:<op>|if<op0>?<op>
 <goto>::=goto<label>|<label>
 <label>::=>:<id>
 <io>::=write<op0>|read<id>

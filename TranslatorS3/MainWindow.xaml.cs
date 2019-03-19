@@ -33,7 +33,7 @@ namespace TranslatorS3
 
         private ITokenParserResult TokenParserResult { get; set; }
         private IParserResult SyntaxParserResult { get; set; }
-        private IParserResult SemanticParserResult { get; set; }
+        private ISemanticParserResult SemanticParserResult { get; set; }
 
         private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
@@ -127,12 +127,12 @@ namespace TranslatorS3
             #endregion
 
 
-            //ParserManager.InitializeParser(
-            //    "SyntaxRecursiveParser.dll",
-            //    "SyntaxRecursiveParser.SyntaxRecursiveParser",
-            //    true,
-            //    Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
-            //    Grammar.Nodes.Axiom);
+            ParserManager.InitializeParser(
+                "SyntaxRecursiveParser.dll",
+                "SyntaxRecursiveParser.SyntaxRecursiveParser",
+                true,
+                Grammar.ClassTable.TokenClasses.Forward(Grammar.ClassTable.UndefinedTokenClassName),
+                Grammar.Nodes.Axiom);
 
             //PushdownAutomaton pushdownAutomaton = new PushdownAutomaton();
             //pushdownAutomaton.Load();
@@ -163,15 +163,15 @@ namespace TranslatorS3
             #region Predescence
             //Create predescence table
 
-            parser = ParserManager.InitializeParser(
-               "PredescenceTableParser.dll",
-               "PredescenceTableParser.PredescenceTableParser",
-               Grammar.Nodes);
+            //parser = ParserManager.InitializeParser(
+            //   "PredescenceTableParser.dll",
+            //   "PredescenceTableParser.PredescenceTableParser",
+            //   Grammar.Nodes);
 
-            var predescenceTable = new PredescenceTable();
-            predescenceTable.Parse(parser);
+            //var predescenceTable = new PredescenceTable();
+            //predescenceTable.Parse(parser);
 
-            var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
+            //var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
 
             //parser = ParserManager.InitializeParser(
             //   "SyntaxPredescenceTableParserWithPOLIZ.dll",
@@ -181,15 +181,15 @@ namespace TranslatorS3
             //   Grammar.Nodes,
             //   Grammar.Nodes.Axiom);
 
-            parser = ParserManager.InitializeParser(
-                "SyntaxPredescenceTableParser.dll",
-                "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
-                predescenceTable.Nodes,
-                f,
-                Grammar.Nodes,
-                Grammar.Nodes.Axiom);
+            //parser = ParserManager.InitializeParser(
+            //    "SyntaxPredescenceTableParser.dll",
+            //    "SyntaxPredescenceTableParser.SyntaxPredescenceTableParser",
+            //    predescenceTable.Nodes,
+            //    f,
+            //    Grammar.Nodes,
+            //    Grammar.Nodes.Axiom);
 
-            SavePredescenceTableTxt(predescenceTable, Grammar);
+            //SavePredescenceTableTxt(predescenceTable, Grammar);
 
             #endregion
         }
@@ -269,7 +269,7 @@ namespace TranslatorS3
 
             var syntaxErrors = errors
                 .Where(n => n.Tag == "syntax")
-                .SelectMany(n => n.TokensOnError.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
+                .SelectMany(n => n.TokensOnError?.Select(m => (m.InStringPosition, m.InStringPosition + m.Name.Length - 1)))
                 .ToArray();
 
             var lexicalErrors = errors
@@ -508,16 +508,16 @@ namespace TranslatorS3
             }
         }
 
-        private static void SaveParsedTokensTxt(ITokenParserResult TokenParserResult)
+        private static void SaveParsedTokensTxt(ITokenParserResult tokenParserResult)
         {
             Configuration.CreateDirectoryFromPath(Configuration.Path.ParsedNodesDirectory);
 
-            if (TokenParserResult.ParsedTokens is null || !TokenParserResult.ParsedTokens.Any())
+            if (tokenParserResult.ParsedTokens is null || !tokenParserResult.ParsedTokens.Any())
             {
                 return;
             }
 
-            var tables = TokenParserResult.ParsedTokens.Distinct(n=>n.Name).GroupBy(n => n.TokenClassId);
+            var tables = tokenParserResult.ParsedTokens.Distinct(n=>n.Name).GroupBy(n => n.TokenClassId);
 
             IDictionary<string,int> GetTable(int classId)
             {
@@ -526,7 +526,7 @@ namespace TranslatorS3
 
             try
             {
-                var parsedNodes = TokenParserResult.ParsedTokens.Select((n, i) => $"{i,4} {n.Name,-10} {n.TokenClassId,2} " +
+                var parsedNodes = tokenParserResult.ParsedTokens.Select((n, i) => $"{i,4} {n.Name,-10} {n.TokenClassId,2} " +
                     $"{GetTable(n.TokenClassId)[n.Name]}");
 
                 var identifiers = GetTable(1).Select(n => $"{n.Value,4} {n.Key}");

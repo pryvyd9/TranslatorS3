@@ -70,7 +70,7 @@ namespace SyntaxRecursiveParser
                         new SyntaxRecursiveParserError
                         {
                             Tag = "system",
-                            Message = "Syntax recursive parser did not recieve any tokens.",
+                            Message = "Syntax recursive parser did not receive any tokens.",
                         },
                     },
                 };
@@ -286,6 +286,7 @@ namespace SyntaxRecursiveParser
                         {
                             Tag = "syntax",
                             Message = message,
+                            TokensOnError = new []{ ParsedTokens.Last() },
                             //TokensOnError = new List<IParsedToken> { currentToken.Value },
                         },
                     },

@@ -27,6 +27,7 @@ namespace Core
         IScope ParentScope { get; }
         IList<IVariable> Variables { get; }
         IList<IScope> ChildrenScopes { get; }
+        IExecutionStream Stream { get; }
     }
 
     public interface IVariable : IExecutionStreamNode

@@ -23,8 +23,6 @@ namespace SemanticParser
 
         private readonly Dictionary<int /* id */, (int[] streamers, int[] breakers)> statements;
 
-        private readonly List<IExecutionStream> streams;
-
 
 
 
@@ -53,19 +51,16 @@ namespace SemanticParser
                         .Select(m => m.Id)
                         .ToArray()))
                 .ToDictionary(n => n.id, n => (n.streamers, n.breakers));
-
-            streams = new List<IExecutionStream>();
         }
 
 
 
-        public IParserResult Parse()
+        public ISemanticParserResult Parse()
         {
             if (ParsedTokens == null || !ParsedTokens.Any())
                 return new SemanticParserResult();
 
             errors = new List<IParserError>();
-            streams.Clear();
 
             CheckUndefined();
 
@@ -79,6 +74,8 @@ namespace SemanticParser
 
             var rootStream = ParseStream(rootScope, null, ParsedTokens.GetEnumerator());
 
+            rootScope.Stream = rootStream;
+
            CheckIdentifiers(rootStream, rootScope);
 
             //CheckIdentifiers();
@@ -86,6 +83,7 @@ namespace SemanticParser
             return new SemanticParserResult
             {
                 Errors = errors,
+                RootScope = rootScope,
             };
         }
 
@@ -245,8 +243,6 @@ namespace SemanticParser
                 Tokens = new List<IExecutionStreamNode>(),
             };
 
-            streams.Add(stream);
-
 
             while (enumerator.MoveNext())
             {
@@ -261,6 +257,7 @@ namespace SemanticParser
                             ParentScope = scope,
                             Variables = new List<IVariable>(),
                             ChildrenScopes = new List<IScope>(),
+                            Stream = stream,
                         };
 
                         scope.ParentScope.ChildrenScopes.Add(scope);

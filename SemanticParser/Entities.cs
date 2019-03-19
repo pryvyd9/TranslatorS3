@@ -27,8 +27,9 @@ namespace SemanticParser
     abstract class ExecutionNode : IExecutionStreamNode
     {
         public IScope Scope { get; set; }
+        public int GrammarNodeId { get; set; }
 
-        public int DeclarationPosition { get; set; }
+        public int InStringPosition { get; set; }
         public StreamControlNodeType Type { get; set; }
     }
 
@@ -36,7 +37,7 @@ namespace SemanticParser
     {
         public IScope ParentScope { get; set; }
         public IList<IVariable> Variables { get; set; }
-
+        public IList<IScope> ChildrenScopes { get; set; }
     }
 
     class Variable : ExecutionNode, IVariable

@@ -17,8 +17,8 @@ namespace Core
     public interface IExecutionStreamNode
     {
         IScope Scope { get; }
-
-        int DeclarationPosition { get; }
+        int GrammarNodeId { get; }
+        int InStringPosition { get; }
         StreamControlNodeType Type { get; }
     }
 
@@ -26,6 +26,7 @@ namespace Core
     {
         IScope ParentScope { get; }
         IList<IVariable> Variables { get; }
+        IList<IScope> ChildrenScopes { get; }
     }
 
     public interface IVariable : IExecutionStreamNode

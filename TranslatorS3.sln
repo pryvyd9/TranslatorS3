@@ -38,7 +38,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptEditor", "..\ScriptEd
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorPanel", "ErrorPanel\ErrorPanel.csproj", "{CEEF88D4-C7E9-449A-8E81-1822FFE163DB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PolizParser", "PolizParser\PolizParser.fsproj", "{0326C908-3142-4F22-845E-785466DA6AB8}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RpnParser", "PolizParser\RpnParser.fsproj", "{0326C908-3142-4F22-845E-785466DA6AB8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

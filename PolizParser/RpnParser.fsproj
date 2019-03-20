@@ -8,12 +8,12 @@
     <ProjectGuid>0326c908-3142-4f22-845e-785466da6ab8</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>PolizParser</RootNamespace>
-    <AssemblyName>PolizParser</AssemblyName>
+    <AssemblyName>RpnParser</AssemblyName>
     <UseStandardResourceNames>true</UseStandardResourceNames>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <WarningsAsErrors>3239;$(WarningsAsErrors)</WarningsAsErrors>
-    <Name>PolizParser</Name>
+    <Name>RpnParser</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

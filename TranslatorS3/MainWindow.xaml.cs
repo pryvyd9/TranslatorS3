@@ -34,6 +34,7 @@ namespace TranslatorS3
         private ITokenParserResult TokenParserResult { get; set; }
         private IParserResult SyntaxParserResult { get; set; }
         private ISemanticParserResult SemanticParserResult { get; set; }
+        private IRpnParserResult RpnParserResult { get; set; }
 
         private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
@@ -192,6 +193,13 @@ namespace TranslatorS3
             //SavePredescenceTableTxt(predescenceTable, Grammar);
 
             #endregion
+
+
+            ParserManager.InitializeParser(
+                "RpnParser.dll",
+                "RpnParser.RpnParser",
+                Grammar.Nodes);
+
         }
 
 
@@ -258,6 +266,15 @@ namespace TranslatorS3
             SemanticParserResult = ParserManager.SemanticParser.Parse();
 
 
+            ParserManager.RpnParser.ParsedTokens = ParsedTokens;
+            ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
+            RpnParserResult = ParserManager.RpnParser.Parse();
+
+
+
+            #region Show errors
+
+
 
             var errors = GetErrors().ToArray();
             
@@ -288,7 +305,8 @@ namespace TranslatorS3
 
             ErrorPanel.ReplaceErrors(document, errors);
 
-            //ErrorBox.Replace(errors);
+            #endregion
+
         }
 
         private void Document_Updated(IDocument document)
@@ -313,11 +331,17 @@ namespace TranslatorS3
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            Save(Configuration.Path.ScriptTxt, document.Text);
+            var contentWithNoLastLineEnding = document.Text
+                .Take(document.Text.Length - 2)
+                .ToStr();
+
+            Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
 
             if (SyntaxParserResult != null)
             {
-                var errors = GetErrors().GroupBy(n => n.Tag).Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
+                var errors = GetErrors()
+                    .GroupBy(n => n.Tag)
+                    .Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
 
                 Save(Configuration.Path.ErrorsTxt, string.Join("\r\n\r\n", errors));
             }

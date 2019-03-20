@@ -66,4 +66,20 @@ namespace Core
     }
 
     #endregion
+
+    #region RpnParser
+
+    public interface IRpnParserResult : IParserResult
+    {
+
+    }
+
+    public interface IRpnParser : IParser<IRpnParserResult>
+    {
+        IEnumerable<IParsedToken> ParsedTokens { set; }
+        IScope RootScope { set; }
+    }
+
+    #endregion
+
 }

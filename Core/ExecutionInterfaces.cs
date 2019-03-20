@@ -28,6 +28,7 @@ namespace Core
         IList<IVariable> Variables { get; }
         IList<IScope> ChildrenScopes { get; }
         IExecutionStream Stream { get; }
+        IExecutionStream RpnStream { get; set; }
         IEnumerable<IExecutionStreamNode> GetConsistentStream();
     }
 
@@ -60,7 +61,7 @@ namespace Core
 
     public interface IDelimiter : IExecutionStreamNode
     {
-        
+        IExecutionStream ChildStream { get; }
     }
 
     //#region System

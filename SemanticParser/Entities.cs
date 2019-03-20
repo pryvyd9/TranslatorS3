@@ -40,6 +40,7 @@ namespace SemanticParser
         public IList<IVariable> Variables { get; set; }
         public IList<IScope> ChildrenScopes { get; set; }
         public IExecutionStream Stream { get; set; }
+        public IExecutionStream RpnStream { get; set; }
 
         private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream)
         {
@@ -55,6 +56,13 @@ namespace SemanticParser
                         {
                             yield return innerNodes;
                         }
+                    }
+                }
+                else if (node is IDelimiter d && d.Type == StreamControlNodeType.ScopeIn)
+                {
+                    foreach (var innerNodes in GetConsistentStream(d.ChildStream))
+                    {
+                        yield return innerNodes;
                     }
                 }
             }
@@ -93,7 +101,7 @@ namespace SemanticParser
 
     class Delimiter : ExecutionNode, IDelimiter
     {
-
+        public IExecutionStream ChildStream { get; set; }
     }
 
     class Label : ExecutionNode, ILabel

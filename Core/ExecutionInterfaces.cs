@@ -9,6 +9,8 @@ namespace Core
         None,
         ScopeIn,
         ScopeOut,
+        ParensIn,
+        ParensOut,
         Breaker,
         Streamer,
         Statement,
@@ -30,6 +32,7 @@ namespace Core
         IExecutionStream Stream { get; }
         IExecutionStream RpnStream { get; set; }
         IEnumerable<IExecutionStreamNode> GetConsistentStream();
+        IEnumerable<IExecutionStreamNode> GetRpnConsistentStream();
     }
 
     public interface IVariable : IExecutionStreamNode
@@ -52,6 +55,7 @@ namespace Core
     public interface IStatement : IExecutionStreamNode
     {
         IEnumerable<IExecutionStream> Streams { get; }
+        IEnumerable<IExecutionStream> RpnStreams { get; set; }
         //int[] Streamers { get; }
         //int[] Breakers { get; }
         int NodeId { get; }
@@ -61,7 +65,7 @@ namespace Core
 
     public interface IDelimiter : IExecutionStreamNode
     {
-        IExecutionStream ChildStream { get; }
+        IScope ChildScope { get; }
     }
 
     //#region System

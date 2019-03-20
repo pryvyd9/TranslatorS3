@@ -40,10 +40,12 @@ namespace SemanticParser
 
             statements = nodes
                 .OfType<ITerminal>()
-                .Where(n => n.ExecuteStreamNodeType == "statement")
+                .OfType<IDefinedStatement>()
+                //.Where(n => n.ExecuteStreamNodeType == "statement")
                 .Select(n => (
                     id: n.Id, 
                     streamers: nodes
+                        .OfType<IDefinedStatement>()
                         .Where(m => n.Streamers.Contains(m.Name))
                         .Select(m => m.Id)
                         .ToArray(),
@@ -183,8 +185,8 @@ namespace SemanticParser
                     var streams = new List<IExecutionStream>();
 
                     bool Break() => streams.Last().Tokens.Last().Type == StreamControlNodeType.Breaker
-                                || ((ITerminal) node).IsStreamMaxCountSet
-                                && ((ITerminal) node).StreamMaxCount <= streams.Count;
+                                || ((IDefinedStatement) node).IsStreamMaxCountSet
+                                && ((IDefinedStatement) node).StreamMaxCount <= streams.Count;
                     do
                     {
                         var str = ParseStream(scope, statement, enumerator);
@@ -204,6 +206,10 @@ namespace SemanticParser
                 }
                 case "delimiter":
                     return CreateDelimiter(StreamControlNodeType.None);
+                case "parens-in":
+                    return CreateDelimiter(StreamControlNodeType.ParensIn);
+                case "parens-out":
+                    return CreateDelimiter(StreamControlNodeType.ParensOut);
                 case "scope-in":
                     return CreateDelimiter(StreamControlNodeType.ScopeIn);
                 case "scope-out":
@@ -239,7 +245,6 @@ namespace SemanticParser
             while (enumerator.MoveNext())
             {
                 var node = ParseNode(scope, enumerator);
-
                
                 var parsedNode = ParsedTokens.First(n => n.InStringPosition == node.InStringPosition);
 
@@ -255,14 +260,11 @@ namespace SemanticParser
                             Variables = new List<IVariable>(),
                             ChildrenScopes = new List<IScope>(),
                         };
-
-                        var innerStream = ParseStream(innerScope, null, enumerator);
-
-                        ((Delimiter)node).ChildStream = innerStream;
-
-                        innerScope.Stream = innerStream;
-
                         scope.ChildrenScopes.Add(innerScope);
+
+                        innerScope.Stream = ParseStream(innerScope, null, enumerator);
+
+                        ((Delimiter)node).ChildScope = innerScope;
                         
                         break;
                     case StreamControlNodeType.ScopeOut:

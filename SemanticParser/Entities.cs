@@ -42,7 +42,7 @@ namespace SemanticParser
         public IExecutionStream Stream { get; set; }
         public IExecutionStream RpnStream { get; set; }
 
-        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream)
+        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream, bool shouldGetRpn)
         {
             foreach (var node in stream.Tokens)
             {
@@ -50,9 +50,9 @@ namespace SemanticParser
 
                 if (node is IStatement st)
                 {
-                    foreach (var innerStream in st.Streams)
+                    foreach (var innerStream in shouldGetRpn ? st.RpnStreams : st.Streams)
                     {
-                        foreach (var innerNodes in GetConsistentStream(innerStream))
+                        foreach (var innerNodes in GetConsistentStream(innerStream, shouldGetRpn))
                         {
                             yield return innerNodes;
                         }
@@ -60,7 +60,7 @@ namespace SemanticParser
                 }
                 else if (node is IDelimiter d && d.Type == StreamControlNodeType.ScopeIn)
                 {
-                    foreach (var innerNodes in GetConsistentStream(d.ChildStream))
+                    foreach (var innerNodes in GetConsistentStream(d.ChildScope.Stream, shouldGetRpn))
                     {
                         yield return innerNodes;
                     }
@@ -70,7 +70,12 @@ namespace SemanticParser
 
         public IEnumerable<IExecutionStreamNode> GetConsistentStream()
         {
-            return GetConsistentStream(Stream);
+            return GetConsistentStream(Stream, false);
+        }
+
+        public IEnumerable<IExecutionStreamNode> GetRpnConsistentStream()
+        {
+            return GetConsistentStream(RpnStream, true);
         }
     }
 
@@ -94,6 +99,7 @@ namespace SemanticParser
     class Statement : ExecutionNode, IStatement
     {
         public IEnumerable<IExecutionStream> Streams { get; set; }
+        public IEnumerable<IExecutionStream> RpnStreams { get; set; }
         public int NodeId { get; set; }
         public bool IsStreamMaxCountSet { get; set; }
         public int StreamMaxCount { get; set; }
@@ -101,7 +107,7 @@ namespace SemanticParser
 
     class Delimiter : ExecutionNode, IDelimiter
     {
-        public IExecutionStream ChildStream { get; set; }
+        public IScope ChildScope { get; set; }
     }
 
     class Label : ExecutionNode, ILabel

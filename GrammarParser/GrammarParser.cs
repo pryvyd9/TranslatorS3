@@ -34,6 +34,11 @@ namespace GrammarParser
         private XElement rootElement;
 
 
+
+
+
+
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -649,6 +654,8 @@ namespace GrammarParser
                 {
                     var name = element.Attribute("name").Value;
 
+                      
+
                     // If node is symbol class
                     if (element.Attribute("symbol-class") != null)
                     {
@@ -720,6 +727,9 @@ namespace GrammarParser
                         bool isStreamMaxCountSet = int.TryParse(element.Attribute("stream-max-count")?.Value,
                             out int streamMaxCount);
 
+                        bool isOperatorPrioritySet = int.TryParse(element.Attribute("operator-priority")?.Value,
+                            out int operatorPriority);
+
                         if (nodes.OfType<ITerminal>().Any(n => n.Name == name))
                         {
                             var node1 = (Node)nodes.OfType<ITerminal>().Single(n => n.Name == name);
@@ -739,16 +749,41 @@ namespace GrammarParser
                             return node1;
                         }
 
-                        Terminal node = new Terminal
+                        Terminal node;
+
+                        if (isStreamMaxCountSet)
                         {
-                            Name = name,
-                            TokenClass = unclassifiedTokenClassName,
-                            ExecuteStreamNodeType = execClass,
-                            Streamers = streamers,
-                            Breakers = breakers,
-                            IsStreamMaxCountSet = isStreamMaxCountSet,
-                            StreamMaxCount = streamMaxCount,
-                        };
+                            node = new DefinedStatement
+                            {
+                                Name = name,
+                                TokenClass = unclassifiedTokenClassName,
+                                ExecuteStreamNodeType = execClass,
+                                Streamers = streamers,
+                                Breakers = breakers,
+                                IsStreamMaxCountSet = isStreamMaxCountSet,
+                                StreamMaxCount = streamMaxCount,
+                            };
+                        }
+                        else if (isOperatorPrioritySet)
+                        {
+                            node = new DefinedOperator
+                            {
+                                Name = name,
+                                TokenClass = unclassifiedTokenClassName,
+                                ExecuteStreamNodeType = execClass,
+                                Priority = operatorPriority,
+                            };
+                        }
+                        else
+                        {
+                            node = new Terminal
+                            {
+                                Name = name,
+                                TokenClass = unclassifiedTokenClassName,
+                                ExecuteStreamNodeType = execClass,
+                            };
+                        }
+                        
 
 
                         if (!isInsideToken || shouldIncludeTerminalsFromInsideOfDefinedTokens)

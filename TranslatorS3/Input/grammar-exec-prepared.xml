@@ -16,7 +16,7 @@ cta=case terminal array(only one symbol terminals)-->
           <d name="while">
             <c>
               <t exec-class="statement" streamers="do" breakers=";" stream-max-count="2">while</t>
-              <d name="op0">
+              <d is-exression-root="true" name="op0">
                 <c>
                   <d name="id" token-class="identifier" exec-class="variable">
                     <c>
@@ -46,45 +46,45 @@ cta=case terminal array(only one symbol terminals)-->
                       <n>head</n>
                     </c>
                   </d>
-                  <t exec-class="operator">=</t>
+                  <t exec-class="operator" operator-priority="0">=</t>
                   <n>op0</n>
                 </c>
                 <c>
                   <d name="op1">
                     <c>
                       <n>op1</n>
-                      <t exec-class="operator">or</t>
+                      <t exec-class="operator" operator-priority="1">or</t>
                       <d name="op2">
                         <c>
                           <n>op2</n>
-                          <t exec-class="operator">and</t>
+                          <t exec-class="operator" operator-priority="2">and</t>
                           <d name="op3">
                             <c>
-                              <t exec-class="operator">not</t>
+                              <t exec-class="operator" operator-priority="3">not</t>
                               <d name="op4">
                                 <c>
                                   <n>op4</n>
-                                  <t>&lt;</t>
+                                  <t exec-class="operator" operator-priority="4">&lt;</t>
                                   <d name="op5">
                                     <c>
                                       <n>op5</n>
-                                      <t exec-class="operator">+</t>
+                                      <t exec-class="operator" operator-priority="5">+</t>
                                       <d name="op6">
                                         <c>
                                           <n>op6</n>
-                                          <t exec-class="operator">*</t>
+                                          <t exec-class="operator" operator-priority="6">*</t>
                                           <d name="op7">
                                             <c>
                                               <n>op7</n>
-                                              <t exec-class="operator">^</t>
+                                              <t exec-class="operator" operator-priority="7">^</t>
                                               <d name="op8">
                                                 <c>
-                                                  <t exec-class="operator">-</t>
+                                                  <t exec-class="operator" operator-priority="8">-</t>
                                                   <d name="op9">
                                                     <c>
-                                                      <t exec-class="delimiter">(</t>
+                                                      <t exec-class="parens-in">(</t>
                                                       <n>op0</n>
-                                                      <t exec-class="delimiter">)</t>
+                                                      <t exec-class="parens-out">)</t>
                                                     </c>
 
                                                     <c>
@@ -129,7 +129,7 @@ cta=case terminal array(only one symbol terminals)-->
                                         </c>
                                         <c>
                                           <n>op6</n>
-                                          <t exec-class="operator">/</t>
+                                          <t exec-class="operator" operator-priority="6">/</t>
                                           <n>op7</n>
                                         </c>
                                         <c>
@@ -139,7 +139,7 @@ cta=case terminal array(only one symbol terminals)-->
                                     </c>
                                     <c>
                                       <n>op5</n>
-                                      <t exec-class="operator">-</t>
+                                      <t exec-class="operator" operator-priority="5">-</t>
                                       <n>op6</n>
                                     </c>
                                     <c>
@@ -149,27 +149,27 @@ cta=case terminal array(only one symbol terminals)-->
                                 </c>
                                 <c>
                                   <n>op4</n>
-                                  <t exec-class="operator">&gt;</t>
+                                  <t exec-class="operator" operator-priority="4">&gt;</t>
                                   <n>op5</n>
                                 </c>
                                 <c>
                                   <n>op4</n>
-                                  <t exec-class="operator">&lt;=</t>
+                                  <t exec-class="operator" operator-priority="4">&lt;=</t>
                                   <n>op5</n>
                                 </c>
                                 <c>
                                   <n>op4</n>
-                                  <t exec-class="operator">&gt;=</t>
+                                  <t exec-class="operator" operator-priority="4">&gt;=</t>
                                   <n>op5</n>
                                 </c>
                                 <c>
                                   <n>op4</n>
-                                  <t exec-class="operator">==</t>
+                                  <t exec-class="operator" operator-priority="4">==</t>
                                   <n>op5</n>
                                 </c>
                                 <c>
                                   <n>op4</n>
-                                  <t exec-class="operator">!=</t>
+                                  <t exec-class="operator" operator-priority="4">!=</t>
                                   <n>op5</n>
                                 </c>
                                 <c>

@@ -4,112 +4,125 @@ module List =
     let iList collection =
         new System.Collections.Generic.List<'a>(collection:'a seq) :> System.Collections.Generic.IList<'a>
 
-//[<AutoOpen>]
-//module Types =
-    //type Scope = 
-    //    {
-    //        childrenScopes:List<Core.IScope>;
-    //        parentScope:Scope option;
-    //        stream:List<Core.IExecutionStreamNode>;
-    //        rpnStream:List<Core.IExecutionStreamNode>;
-    //        variables:List<Core.IVariable>;
-    //    }
+[<AutoOpen>]
+module Types =
+    type OperatorStackNode = {grammarNode:Core.IDefinedOperator;executionNode:Core.IExecutionStreamNode}
+    
+    type OperatorStack = OperatorStackNode list
 
-    //    member this.getConsistentStream() =
-    //        let rec inFunc (stream:seq<Core.IExecutionStreamNode>) =
-    //            [
-    //                for node in stream do
-    //                    yield node
-    //                    match box node with
-    //                    | :? Core.IStatement as st ->
-    //                        for innerStream in st.Streams do
-    //                            for innerNodes in inFunc innerStream.Tokens do
-    //                                yield innerNodes
-    //                    | _ -> ()
-    //            ]
-    //        inFunc this.stream
-
-    //    interface Core.IScope with
-    //        member this.ChildrenScopes = 
-    //            List.iList this.childrenScopes
-    //        member this.GetConsistentStream() = 
-    //            this.getConsistentStream() :> Core.IExecutionStreamNode seq
-    //        member this.ParentScope = 
-    //            this.parentScope.Value :> Core.IScope
-    //        member this.Stream = 
-    //            { new Core.IExecutionStream with member __.Tokens = this.stream :> Core.IExecutionStreamNode seq}
-    //        member this.Variables =  
-    //            List.iList this.variables
-    //        member this.RpnStream 
-    //            with get() =
-    //                {new Core.IExecutionStream with member __.Tokens = this.rpnStream :> Core.IExecutionStreamNode seq}
-    //            and set void = 
+    type Type = Core.StreamControlNodeType
 
 module Parse = 
-    let parse grammarNodes rootScope parsedTokens executionStream =
+    
+
+    let parse rootScope priorityTable (nodes:Core.INode seq) =
         //let prototypeScope = {childrenScopes = []; parentScope = None; stream = []; variables = []}
 
 
-        let rec getScope (scope:Core.IScope) =
+        let rec processScope (scope:Core.IScope) =
             if scope.Stream <> null
             then
-                let newRpnStream = getStream scope.Stream.Tokens
+                let newRpnStream = getRpnStream scope.Stream.Tokens
                 scope.RpnStream <- {new Core.IExecutionStream with member __.Tokens = newRpnStream}
-                failwith("")
+                ()
             else
-                failwith("")
-           
-        and getStream stream =
+                ()
+        and getRpnStream stream =
+            //let mutable (operatorStack:(Core.IDefinedOperator*Core.IExecutionStreamNode) list) = []
+
+
+            let mutable stacks:OperatorStack ref list  = [ref[]]
+
             let h = 
                 [
                     for node in stream do
-                        yield node
-                        match node with
+                        match box node with
+                        | :? Core.IVariable | :? Core.ILiteral -> yield node
                         | :? Core.IDelimiter as delimiter ->
                             match delimiter.Type with
-                            | Core.StreamControlNodeType.ScopeIn ->
-                                let scope = delimiter.Scope
-                                let innerScopeIndex = scope.ChildrenScopes |> Seq.findIndex (fun x -> x = scope)
-                                let innerScope = scope.ParentScope.ChildrenScopes |> Seq.item innerScopeIndex
+                            | Type.ScopeIn -> 
+                                processScope delimiter.ChildScope
 
-                                let innerScope= getScope innerScope
+                            | Type.ScopeOut | Type.Breaker | Type.Streamer | Type.None -> 
+                                ()
 
-                                failwith("")
-                            | Core.StreamControlNodeType.Breaker ->
-                                failwith("")
-                            | Core.StreamControlNodeType.Streamer ->
-                                failwith("")
+                            | Type.ParensIn -> 
+                                stacks <- ref[] :: stacks
+
+                            | Type.ParensOut ->
+                                // Copy last(top) stack remains to stream.
+                                for node in stacks.Head.Value -> node.executionNode
+                                stacks <- stacks.Tail
+
+                            | Type.Statement ->
+                                failwith("Delimiter cannot be a statement.")
+
                             | _ ->
-                                failwith("")
+                                failwith("Undefined delimiter type")
 
-                            failwith("")
+                        | :? Core.IOperator as operator ->
+                            let grammarNode = nodes |> Seq.find(fun x -> x.Id = operator.GrammarNodeId) 
+
+                            match grammarNode with
+                            | :? Core.IDefinedOperator as definedOperator ->
+                                while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
+                                    yield stacks.Head.Value.Head.executionNode
+                                    stacks.Head.Value <- stacks.Head.Value.Tail
+                                stacks.Head.Value <- {grammarNode = definedOperator; executionNode = node} :: stacks.Head.Value
+
+                            | _ ->
+                                failwith("not implemented")
+                                //yield node
+                        | :? Core.IStatement as statement ->
+                            statement.RpnStreams <- [
+                                for stream in statement.Streams ->
+                                    let innerStream = getRpnStream stream.Tokens
+                                    {new Core.IExecutionStream with member __.Tokens = innerStream}
+                            ]
 
                         | _ ->
                             failwith("")
+
+                    // Copy all stacks remains to stream.
+                    for stack in stacks do 
+                        for node in stack.Value -> 
+                            node.executionNode
                 ]
+            //let g = h |> List.map(fun x -> nodes |> Seq.find(fun y -> y.Id = x.GrammarNodeId))
+            let g = h |> List.map(function | :? Core.IVariable as v -> v.Name | :? Core.ILiteral as l -> string l.Value | x -> (nodes |> Seq.find(fun y -> y.Id = x.GrammarNodeId)).Name )
+            printfn "%A" g
+            Seq.ofList h;
 
-            seq {
-                for node in stream do
-                    yield node
-                    match node with
-                    | :? Core.IDelimiter as delimiter ->
-                        failwith("")
+        processScope rootScope 
 
-                    | _ ->
-                        failwith("")
+        let j = rootScope.GetRpnConsistentStream();
+        let jj = rootScope.GetConsistentStream();
+        
 
-            }
-            //failwith("")
+        let g = 
+            rootScope.GetRpnConsistentStream() 
+            |> Seq.map(function 
+                | :? Core.IVariable as v -> v.Name 
+                | :? Core.ILiteral as l -> string l.Value 
+                | x -> (nodes |> Seq.find(fun y -> y.Id = x.GrammarNodeId)).Name 
+            ) |> List.ofSeq
+        printfn "%A" g
 
-        getScope rootScope 
 
-type RpnParser(grammarNodes:Core.INodeCollection) =
+type RpnParser(grammarNodes:Core.INode seq) =
+    let operators = grammarNodes |> Seq.choose(function | :? Core.IDefinedOperator as op -> Some(op) | _ -> None)
+
+    let priorityTable = dict [ for op in operators -> op, op.Priority ]
+
     member val RootScope:Core.IScope = null with get, set
     member val ParsedTokens:Core.IParsedToken seq = null with get, set
-    member this.Parse() =
-        let executionStream = this.RootScope.GetConsistentStream
 
-        Parse.parse grammarNodes this.RootScope this.ParsedTokens executionStream |> ignore
+
+    member this.Parse() =
+        //let executionStream = this.RootScope.GetConsistentStream
+
+
+        Parse.parse this.RootScope priorityTable grammarNodes |> ignore
 
         failwith("")
     interface Core.IRpnParser with

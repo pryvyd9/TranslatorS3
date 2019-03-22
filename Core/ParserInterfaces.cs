@@ -71,7 +71,7 @@ namespace Core
 
     public interface IRpnParserResult : IParserResult
     {
-
+        IEnumerable<IExecutionStreamNode> RpnStream { get; }
     }
 
     public interface IRpnParser : IParser<IRpnParserResult>

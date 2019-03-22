@@ -200,36 +200,60 @@ module Parse =
                         } |> toRpmStream
                     | Ujmp ->
                         let label = (statement.Streams |> Seq.last |> Seq.rev |> Seq.item 1) :?> Core.IDefinedLabel
-                        
-                        let rec tryFindLabelDeclaration name (scope:Core.IScope) =
-                            match scope.Labels |> Seq.tryFind (fun n -> n.Name = name) with
-                            | Some foundLabel ->
-                                Some foundLabel
-                            | None ->
-                                if isNull scope.ParentScope
-                                then
-                                    None
-                                else 
-                                    tryFindLabelDeclaration name scope.ParentScope
+                        {
+                            new Core.IUserJump with
+                            member __.Label = label:>Core.ILabel
+                            member __.Scope = statement.Scope
+                            member __.Type = Type.None
+                        } |> toRpmStream
 
-                        match tryFindLabelDeclaration label.Name statement.Scope with
-                        | Some label ->
-                            {
-                                new Core.IUserJump with
-                                member __.Label = label
-                                member __.Scope = statement.Scope
-                                member __.Type = Type.None
-                            } |> toRpmStream
-                        | None ->
-                            failwith("Undeclared label referenced.")
+                        ////let rec tryFindLabelDeclaration name (scope:Core.IScope) =
+                        ////    match scope.Labels |> Seq.tryFind (fun n -> n.Name = name) with
+                        ////    | Some foundLabel ->
+                        ////        Some foundLabel
+                        ////    | None ->
+                        ////        match scope.ChildrenScopes |> List.ofSeq with
+                        ////        | [] -> None
+                        ////        | scopes ->
+                        ////            let rec find =
+                        ////                function
+                        ////                | [] -> None
+                        ////                | h::t ->
+                        ////                    match tryFindLabelDeclaration name h with
+                        ////                    | None -> find t
+                        ////                    | label -> label
+
+                        ////            find scopes
+                                    
+
+                        //let rec tryFindLabelDeclaration name (scope:Core.IScope) =
+                        //    match scope.Labels |> Seq.tryFind (fun n -> n.Name = name) with
+                        //    | Some foundLabel ->
+                        //        Some foundLabel
+                        //    | None ->
+                        //        if isNull scope.ParentScope
+                        //        then
+                        //            None
+                        //        else 
+                        //            tryFindLabelDeclaration name scope.ParentScope
+
+                        //match tryFindLabelDeclaration label.Name statement.Scope with
+                        //| Some label ->
+                        //    {
+                        //        new Core.IUserJump with
+                        //        member __.Label = label
+                        //        member __.Scope = statement.Scope
+                        //        member __.Type = Type.None
+                        //    } |> toRpmStream
+                        //| None ->
+                        //    failwith("Undeclared label referenced.")
                         
             
             rpnStream
 
         processScope rootScope 
 
-        let g = getString (rootScope.GetRpnConsistentStream() |> List.ofSeq) nodes
-        printfn "%A" g
+        //getString (rootScope.GetRpnConsistentStream() |> List.ofSeq) nodes
 
 
 type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
@@ -246,11 +270,18 @@ type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
 
     member this.Parse() =
         
-        Parse.parse this.RootScope grammarNodes statementRules |> ignore
+        Parse.parse this.RootScope grammarNodes statementRules
+        let str = Parse.getString (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        printfn "%A" str
 
-        failwith("")
+        {
+            new Core.IRpnParserResult with
+            member __.RpnStream = this.RootScope.GetRpnConsistentStream()
+            member __.Errors = Seq.empty
+        }
+
     interface Core.IRpnParser with
-        member this.Parse():obj = this.Parse()
+        member this.Parse():obj = this.Parse() :> obj
         member this.Parse():Core.IRpnParserResult = this.Parse()
         member this.RootScope with set v = this.RootScope <- v
         member this.ParsedTokens with set v = this.ParsedTokens <- v

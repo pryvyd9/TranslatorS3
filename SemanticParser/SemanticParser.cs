@@ -83,7 +83,7 @@ namespace SemanticParser
 
             CheckUndefined();
 
-            CheckLabels();
+            CheckLabels(rootScope);
 
             return new SemanticParserResult
             {
@@ -117,25 +117,39 @@ namespace SemanticParser
 
         private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
         {
-            foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
+            if (scope.ParentScope is null)
+            {
+                foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
 
-            if (foundLabel is null)
-            {
-                if (scope.ParentScope is null)
-                {
+                if (foundLabel is null)
                     return false;
-                }
-                else
-                {
-                    return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
-                }
-            }
-            else
-            {
+
                 return true;
             }
+
+            return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
         }
 
+        //private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
+        //{
+        //    foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
+
+        //    if (foundLabel is null)
+        //    {
+        //        if (scope.ParentScope is null)
+        //        {
+        //            return false;
+        //        }
+        //        else
+        //        {
+        //            return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        return true;
+        //    }
+        //}
         private object GetValueFromParsedToken(IParsedToken token)
         {
             if (int.TryParse(token.Name, out var value))
@@ -190,7 +204,8 @@ namespace SemanticParser
                         GrammarNodeId = parsedToken.Id,
                     };
 
-                    scope.Labels.Add(label);
+                    AddLabel(label, scope);
+                    //scope.Labels.Add(label);
                     return label;
                 case "literal":
                     var literal = new Literal
@@ -254,6 +269,18 @@ namespace SemanticParser
                     return CreateDelimiter(StreamControlNodeType.ScopeOut);
                 default:
                     return CreateDelimiter(StreamControlNodeType.None);
+            }
+
+            void AddLabel(ILabel label, IScope s)
+            {
+                if (s.ParentScope is null)
+                {
+                    s.Labels.Add(label);
+                }
+                else
+                {
+                    AddLabel(label, s.ParentScope);
+                }
             }
 
             Delimiter CreateDelimiter(StreamControlNodeType type)
@@ -372,7 +399,8 @@ namespace SemanticParser
             }
         }
 
-        private void CheckLabels()
+
+        private void CheckLabels(IScope rootScope)
         {
             var labels = GetTokensOfClass("label").ToArray();
 
@@ -398,6 +426,19 @@ namespace SemanticParser
                     return index > 0 && tokens[index - 1].Name != "goto";
                 }).ToArray();
 
+                // Set declaration position to first declaration
+                if (declarations.Length == 1)
+                {
+                    var declaredLabels = rootScope.Labels.OfType<IDefinedLabel>().Where(n => n.Name == labelName);
+
+                    foreach (var declaredLabel in declaredLabels)
+                    {
+                        ((DefinedLabel)declaredLabel).InStringPosition = declarations[0].InStringPosition;
+                    }
+                }
+
+
+                // Show errors if multiple declaration
                 if (declarations.Length > 1)
                 {
                     var positions = declarations.Select(n => (n.RowIndex, n.InRowPosition));
@@ -433,6 +474,92 @@ namespace SemanticParser
                 }
             }
         }
+
+        //private void CheckLabels(IScope rootScope)
+        //{
+
+        //    var stream = rootScope.GetConsistentStream().ToArray();
+
+
+
+        //    var labels = stream
+        //        .Select((n,i) => (i,n))
+        //        .Where(n => n.n is IDefinedLabel)
+        //        .Select(n => (index: n.i, label: (IDefinedLabel)n.n)).ToArray();
+
+        //    if (labels.Length == 0)
+        //        return;
+
+        //    var tokens = ParsedTokens.ToList();
+
+        //    // Get declarations
+
+        //    var declarations = labels.Where(n =>
+        //    {
+        //        if (n.index == 0)
+        //            return true;
+
+        //        if (stream[n.index - 1] is IStatement statement
+        //            && nodes.First(m => m.Id == statement.GrammarNodeId).Name == "goto")
+        //        {
+        //            return false;
+        //        }
+
+        //        return true;
+        //    });
+
+        //    // Check declaration interference
+
+        //    var scopedDeclarations = declarations.GroupBy(n => n.label.Scope);
+
+        //    foreach (var scopedDeclaration in scopedDeclarations.Where(n => n.Count() > 1))
+        //    {
+        //        // Addressing same label
+        //        var equalDeclarations = scopedDeclaration.GroupBy(n => n.label);
+
+        //        foreach (var equalDeclaration in equalDeclarations)
+        //        {
+        //            var instances = equalDeclaration.Select(n => tokens[n.index]).ToArray();
+
+        //            var message = $"Multiple declaration of label '{instances[0].Name}' " +
+        //                $"at {{{string.Join(",", instances.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"))}}}";
+
+        //            errors.Add(new SemanticParserError
+        //            {
+        //                Tag = "semantic",
+        //                Message = message,
+        //                TokensOnError = instances,
+        //            });
+
+        //            var referencesToEqualDeclarations = labels.Where(n => !scopedDeclaration.Any(m => m.index == n.index) && equalDeclaration.Contains(n));
+
+        //            instances = referencesToEqualDeclarations.Select(n => tokens[n.index]).ToArray();
+
+        //            message = $"Label reference '{instances[0].Name}' is ambigous " +
+        //               $"at {{{string.Join(",", instances.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"))}}}";
+
+        //            errors.Add(new SemanticParserError
+        //            {
+        //                Tag = "semantic",
+        //                Message = message,
+        //                TokensOnError = instances,
+        //            });
+        //        }
+
+        //    }
+
+
+
+        //    void AddError(IParsedToken instance, string message)
+        //    {
+        //        errors.Add(new SemanticParserError
+        //        {
+        //            Tag = "semantic",
+        //            Message = message,
+        //            TokensOnError = new[] { instance },
+        //        });
+        //    }
+        //}
 
 
         private void CheckIdentifiers(IScope rootScope)

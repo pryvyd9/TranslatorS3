@@ -45,7 +45,7 @@ namespace SemanticParser
                 .Select(n => (
                     id: n.Id, 
                     streamers: nodes
-                        .OfType<IDefinedStatement>()
+                        //.OfType<IDefinedStatement>()
                         .Where(m => n.Streamers.Contains(m.Name))
                         .Select(m => m.Id)
                         .ToArray(),
@@ -69,6 +69,7 @@ namespace SemanticParser
             var rootScope = new Scope
             {
                 Variables = new List<IVariable>(),
+                Labels = new List<ILabel>(),
                 ChildrenScopes = new List<IScope>(),
             };
 
@@ -106,6 +107,27 @@ namespace SemanticParser
                 else
                 {
                     return TryFindVariableDeclaration(name, scope.ParentScope, out foundVariable);
+                }
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
+        {
+            foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
+
+            if (foundLabel is null)
+            {
+                if (scope.ParentScope is null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
                 }
             }
             else
@@ -154,6 +176,22 @@ namespace SemanticParser
 
                     scope.Variables.Add(variable);
                     return variable;
+                case "label":
+                    if (TryFindLabelDeclaration(parsedToken.Name, scope, out var foundLabel))
+                    {
+                        return foundLabel;
+                    }
+
+                    var label = new DefinedLabel
+                    {
+                        Scope = scope,
+                        InStringPosition = parsedToken.InStringPosition,
+                        Name = parsedToken.Name,
+                        GrammarNodeId = parsedToken.Id,
+                    };
+
+                    scope.Labels.Add(label);
+                    return label;
                 case "literal":
                     var literal = new Literal
                     {
@@ -182,16 +220,16 @@ namespace SemanticParser
                         GrammarNodeId = parsedToken.Id,
                     };
 
-                    var streams = new List<IExecutionStream>();
+                    var streams = new List<IEnumerable<IExecutionStreamNode>>();
 
-                    bool Break() => streams.Last().Tokens.Last().Type == StreamControlNodeType.Breaker
+                    bool Break() => streams.Last().Last().Type == StreamControlNodeType.Breaker
                                 || ((IDefinedStatement) node).IsStreamMaxCountSet
                                 && ((IDefinedStatement) node).StreamMaxCount <= streams.Count;
                     do
                     {
                         var str = ParseStream(scope, statement, enumerator);
 
-                        if (!str.Tokens.Any())
+                        if (!str.Any())
                         {
                             break;
                         }
@@ -231,24 +269,22 @@ namespace SemanticParser
 
         }
 
-        private IExecutionStream ParseStream(
+        private IEnumerable<IExecutionStreamNode> ParseStream(
             IScope scope, 
             IStatement currentStatement, 
             IEnumerator<IParsedToken> enumerator)
         {
-            var stream = new ExecutionStream
-            {
-                Tokens = new List<IExecutionStreamNode>(),
-            };
-
+            var stream = new List<IExecutionStreamNode>();
+            
 
             while (enumerator.MoveNext())
             {
                 var node = ParseNode(scope, enumerator);
                
-                var parsedNode = ParsedTokens.First(n => n.InStringPosition == node.InStringPosition);
+                var parsedNode = ParsedTokens
+                    .First(n => n.InStringPosition == ((IDefinedStreamNode)node).InStringPosition);
 
-                stream.Tokens.Add(node);
+                stream.Add(node);
 
                 // Change scope if braces met.
                 switch (node.Type)
@@ -258,6 +294,7 @@ namespace SemanticParser
                         {
                             ParentScope = scope,
                             Variables = new List<IVariable>(),
+                            Labels = new List<ILabel>(),
                             ChildrenScopes = new List<IScope>(),
                         };
                         scope.ChildrenScopes.Add(innerScope);
@@ -273,7 +310,7 @@ namespace SemanticParser
 
                 if (currentStatement is null) continue;
 
-                var lastStatement = stream.Tokens.LastOrDefault(n => n is IStatement);
+                var lastStatement = stream.LastOrDefault(n => n is IStatement);
 
                 if (lastStatement != null && lastStatement.Scope == currentStatement.Scope)
                 {
@@ -306,7 +343,7 @@ namespace SemanticParser
 
             }
 
-            
+
             return stream;
         }
 
@@ -427,10 +464,11 @@ namespace SemanticParser
 
                     var rightPart = allNodes
                         .Skip(i + 1)
-                        .TakeWhile(n =>!(n is IDelimiter && GetNodeById(n.GrammarNodeId).Name == StatementDelimiterName))
+                        .TakeWhile(n =>!(n is IDelimiter && GetNodeById(((IDefinedStreamNode)n).GrammarNodeId).Name == StatementDelimiterName))
                         .ToList();
 
                     var lastMention = rightPart
+                        .OfType<IDefinedStreamNode>()
                         .LastOrDefault(n => n.InStringPosition == variable.InStringPosition);
 
                     if (lastMention != null)

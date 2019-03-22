@@ -227,7 +227,7 @@ cta=case terminal array(only one symbol terminals)-->
         <c>
           <d name="goto">
             <c>
-              <t exec-class="statement" breakers=";">goto</t>
+              <t exec-class="statement" breakers=";|:">goto</t>
               <d name="label" token-class="label" exec-class="label">
                 <c>
                   <t>&gt;:</t>
@@ -243,11 +243,11 @@ cta=case terminal array(only one symbol terminals)-->
         <c>
           <d name="io">
             <c>
-              <t exec-class="statement" breakers=";">write</t>
+              <t exec-class="statement" breakers=";|:">write</t>
               <n>op0</n>
             </c>
             <c>
-              <t exec-class="statement" breakers=";">read</t>
+              <t exec-class="statement" breakers=";|:">read</t>
               <n>id</n>
             </c>
           </d>

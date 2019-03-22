@@ -1,0 +1,113 @@
+﻿<!--Statement filling rules set:
+
+statements - statements
+statement - statement
+s - stream
+d - declaration
+  declares label
+    label=x
+      where x is a label name to be declared inside the statement.
+      
+r - reference
+  references labels or other symbols
+  types:
+    call=x
+      where x is a symbol name to execute.
+      It can be a system or user function, class etc.
+      name addressing rule: namespace[[.namespace]...].classname[[.classname]...].membername
+    param-count=x
+      where x is a parameter count for calling specified function.
+    jmp=x
+      where x is a label name declared inside the statement.
+      Unconditional jump.
+    jn=x
+      jump on false value preceeding
+    jp=x
+      jump on true value preceeding
+    ujmp=true
+      jump to user defined label given as last node in preceeding stream
+      
+c - case
+  works like switch.
+  if no limits specified - default case.
+  restrictions:
+    stream-count=x
+      where x is a max number of streams given
+      to this particular appliance of the statement
+    
+Remarks:
+
+1) Label names are relative meaning outside labels to be referenced
+  have to contain relative path to them. Example:
+  <if>
+    x < 4 elseLabel jn
+    <then>
+      <goto>
+        .exitLabel jump
+      </goto>
+    </then>
+    exitLabel jump
+    elseLabel:
+    <else>
+      <aa>
+        <bb>
+          <goto>
+            ...exitLabel jump
+          </goto>
+        </bb>
+      </aa>
+      do stuff
+    </else>
+    exitLabel:
+  </if>
+2) Calles require symbol name, parameter count and parameters
+  if no count specified then consedered 0
+-->
+
+<statements>
+  <statement name="write">
+    <c>
+      <s id="0"/>
+      <r call="system.io.write" param-count="1"/>
+    </c>
+  </statement>
+  <statement name="read">
+    <c>
+      <s id="0"/>
+      <r call="system.io.read" param-count="1"/>
+    </c> 
+  </statement>
+  <statement name="if">
+    <c stream-count="3">
+      <s id="0"/>
+      <r jn="else"/>
+      <s id="1"/>
+      <r jmp="ef"/>
+      <d label="else"/>
+      <s id="2"/>
+      <d label="ef"/>
+    </c>
+    <c stream-count="2">
+      <s id="0"/>
+      <r jn="ef"/>
+      <s id="1"/>
+      <d label="ef"/>
+    </c>
+  </statement>
+  <statement name="while">
+    <c>
+      <d label="cond"/>
+      <s id="0"/>
+      <r jn="ew"/>
+      <s id="1"/>
+      <r jmp="cond"/>
+      <d label="ew"/>
+    </c>
+  </statement>
+  <statement name="goto">
+    <c>
+      <s id="0"/>
+      <r ujmp="true"/>
+    </c>
+  </statement>
+</statements>

@@ -198,7 +198,8 @@ namespace TranslatorS3
             ParserManager.InitializeParser(
                 "RpnParser.dll",
                 "RpnParser.RpnParser",
-                Grammar.Nodes);
+                Grammar.Nodes,
+                Configuration.Path.StatementRulesXml);
 
         }
 

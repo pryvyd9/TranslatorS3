@@ -43,7 +43,7 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Types.fs" />
+    <Compile Include="StatementRuleParser.fs" />
     <Compile Include="Parser.fs" />
     <None Include="Script.fsx" />
     <Content Include="packages.config" />
@@ -59,6 +59,8 @@
     <Reference Include="System.ValueTuple">
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj">

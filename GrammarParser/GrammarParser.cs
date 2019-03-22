@@ -751,40 +751,39 @@ namespace GrammarParser
 
                         Terminal node;
 
-                        if (isStreamMaxCountSet)
+                        switch (execClass)
                         {
-                            node = new DefinedStatement
-                            {
-                                Name = name,
-                                TokenClass = unclassifiedTokenClassName,
-                                ExecuteStreamNodeType = execClass,
-                                Streamers = streamers,
-                                Breakers = breakers,
-                                IsStreamMaxCountSet = isStreamMaxCountSet,
-                                StreamMaxCount = streamMaxCount,
-                            };
+                            case "statement":
+                                node = new DefinedStatement
+                                {
+                                    Name = name,
+                                    TokenClass = unclassifiedTokenClassName,
+                                    ExecuteStreamNodeType = execClass,
+                                    Streamers = streamers,
+                                    Breakers = breakers,
+                                    IsStreamMaxCountSet = isStreamMaxCountSet,
+                                    StreamMaxCount = streamMaxCount,
+                                };
+                                break;
+                            case "operator":
+                                node = new DefinedOperator
+                                {
+                                    Name = name,
+                                    TokenClass = unclassifiedTokenClassName,
+                                    ExecuteStreamNodeType = execClass,
+                                    Priority = operatorPriority,
+                                };
+                                break;
+                            default:
+                                node = new Terminal
+                                {
+                                    Name = name,
+                                    TokenClass = unclassifiedTokenClassName,
+                                    ExecuteStreamNodeType = execClass,
+                                };
+                                break;
                         }
-                        else if (isOperatorPrioritySet)
-                        {
-                            node = new DefinedOperator
-                            {
-                                Name = name,
-                                TokenClass = unclassifiedTokenClassName,
-                                ExecuteStreamNodeType = execClass,
-                                Priority = operatorPriority,
-                            };
-                        }
-                        else
-                        {
-                            node = new Terminal
-                            {
-                                Name = name,
-                                TokenClass = unclassifiedTokenClassName,
-                                ExecuteStreamNodeType = execClass,
-                            };
-                        }
-                        
-
+                           
 
                         if (!isInsideToken || shouldIncludeTerminalsFromInsideOfDefinedTokens)
                         {

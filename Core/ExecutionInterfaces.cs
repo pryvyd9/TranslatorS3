@@ -19,51 +19,55 @@ namespace Core
     public interface IExecutionStreamNode
     {
         IScope Scope { get; }
+        StreamControlNodeType Type { get; }
+    }
+
+    public interface IDefinedStreamNode : IExecutionStreamNode
+    {
         int GrammarNodeId { get; }
         int InStringPosition { get; }
-        StreamControlNodeType Type { get; }
     }
 
     public interface IScope
     {
         IScope ParentScope { get; }
         IList<IVariable> Variables { get; }
+        IList<ILabel> Labels { get; }
         IList<IScope> ChildrenScopes { get; }
-        IExecutionStream Stream { get; }
-        IExecutionStream RpnStream { get; set; }
+        IEnumerable<IExecutionStreamNode> Stream { get; }
+        IEnumerable<IExecutionStreamNode> RpnStream { get; set; }
         IEnumerable<IExecutionStreamNode> GetConsistentStream();
         IEnumerable<IExecutionStreamNode> GetRpnConsistentStream();
     }
 
-    public interface IVariable : IExecutionStreamNode
+    public interface IVariable : IDefinedStreamNode
     {
         bool IsAssigned { get; }
         object Value { get; set; }
         string Name { get; }
     }
 
-    public interface ILiteral : IExecutionStreamNode
+    public interface ILiteral : IDefinedStreamNode
     {
         object Value { get; }
     }
 
-    public interface IOperator : IExecutionStreamNode
+    public interface IOperator : IDefinedStreamNode
     {
         int OperandCount { get; }
     }
 
-    public interface IStatement : IExecutionStreamNode
+    public interface IStatement : IDefinedStreamNode
     {
-        IEnumerable<IExecutionStream> Streams { get; }
-        IEnumerable<IExecutionStream> RpnStreams { get; set; }
-        //int[] Streamers { get; }
-        //int[] Breakers { get; }
+        IEnumerable<IEnumerable<IExecutionStreamNode>> Streams { get; }
+        IEnumerable<IEnumerable<IExecutionStreamNode>> RpnStreams { get; set; }
+        IEnumerable<IExecutionStreamNode> RpnStreamProcessed { get; set; }
         int NodeId { get; }
         bool IsStreamMaxCountSet { get; }
         int StreamMaxCount { get; }
     }
 
-    public interface IDelimiter : IExecutionStreamNode
+    public interface IDelimiter : IDefinedStreamNode
     {
         IScope ChildScope { get; }
     }
@@ -72,12 +76,22 @@ namespace Core
 
     public interface ILabel : IExecutionStreamNode
     {
-        
+        string Name { get; }
+    }
+
+    public interface IDefinedLabel : ILabel, IDefinedStreamNode
+    {
+
     }
 
     public interface IJump : IExecutionStreamNode
     {
-        
+        ILabel Label { get; }
+    }
+
+    public interface IUserJump : IJump
+    {
+
     }
 
     public interface IJumpConditional : IJump
@@ -89,11 +103,17 @@ namespace Core
     {
 
     }
-
-    public interface IExecutionStream
+   
+    public interface ICall : IExecutionStreamNode
     {
-        IEnumerable<IExecutionStreamNode> Tokens { get; }
+        string Address { get; }
+        int ParamCount { get; }
     }
+
+    //public interface IExecutionStream
+    //{
+    //    IEnumerable<IExecutionStreamNode> Tokens { get; }
+    //}
 
     //#endregion
 }

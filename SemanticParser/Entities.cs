@@ -28,23 +28,27 @@ namespace SemanticParser
     abstract class ExecutionNode : IExecutionStreamNode
     {
         public IScope Scope { get; set; }
-        public int GrammarNodeId { get; set; }
-
-        public int InStringPosition { get; set; }
         public StreamControlNodeType Type { get; set; }
+    }
+
+    abstract class DefinedExecutionNode : ExecutionNode, IDefinedStreamNode
+    {
+        public int GrammarNodeId { get; set; }
+        public int InStringPosition { get; set; }
     }
 
     class Scope : IScope
     {
         public IScope ParentScope { get; set; }
         public IList<IVariable> Variables { get; set; }
+        public IList<ILabel> Labels { get; set; }
         public IList<IScope> ChildrenScopes { get; set; }
-        public IExecutionStream Stream { get; set; }
-        public IExecutionStream RpnStream { get; set; }
+        public IEnumerable<IExecutionStreamNode> Stream { get; set; }
+        public IEnumerable<IExecutionStreamNode> RpnStream { get; set; }
 
-        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IExecutionStream stream, bool shouldGetRpn)
+        private IEnumerable<IExecutionStreamNode> GetConsistentStream(IEnumerable<IExecutionStreamNode> stream, bool shouldGetRpn)
         {
-            foreach (var node in stream.Tokens)
+            foreach (var node in stream)
             {
                 yield return node;
 
@@ -79,60 +83,66 @@ namespace SemanticParser
         }
     }
 
-    class Variable : ExecutionNode, IVariable
+    class Variable : DefinedExecutionNode, IVariable
     {
         public bool IsAssigned { get; set; }
         public object Value { get; set; }
         public string Name { get; set; }
     }
 
-    class Literal : ExecutionNode, ILiteral
+    class Literal : DefinedExecutionNode, ILiteral
     {
         public object Value { get; set; }
     }
 
-    class Operator : ExecutionNode, IOperator
+    class Operator : DefinedExecutionNode, IOperator
     {
         public int OperandCount { get; set; }
     }
 
-    class Statement : ExecutionNode, IStatement
+    class Statement : DefinedExecutionNode, IStatement
     {
-        public IEnumerable<IExecutionStream> Streams { get; set; }
-        public IEnumerable<IExecutionStream> RpnStreams { get; set; }
+        public IEnumerable<IEnumerable<IExecutionStreamNode>> Streams { get; set; }
+        public IEnumerable<IEnumerable<IExecutionStreamNode>> RpnStreams { get; set; }
+        public IEnumerable<IExecutionStreamNode> RpnStreamProcessed { get; set; }
         public int NodeId { get; set; }
         public bool IsStreamMaxCountSet { get; set; }
         public int StreamMaxCount { get; set; }
     }
 
-    class Delimiter : ExecutionNode, IDelimiter
+    class Delimiter : DefinedExecutionNode, IDelimiter
     {
         public IScope ChildScope { get; set; }
     }
 
     class Label : ExecutionNode, ILabel
     {
-
+        public string Name { get; set; }
     }
 
-    class Jump : ExecutionNode, IJump
+    class DefinedLabel : DefinedExecutionNode, IDefinedLabel
     {
-
+        public string Name { get; set; }
     }
 
-    class JumpConditional : Jump, IJumpConditional
-    {
-        
-    }
+    //class Jump : ExecutionNode, IJump
+    //{
 
-    class JumpConditionalNegative : JumpConditional, IJumpConditionalNegative
-    {
+    //}
 
-    }
+    //class JumpConditional : Jump, IJumpConditional
+    //{
 
-    class ExecutionStream : IExecutionStream
-    {
-        internal List<IExecutionStreamNode> Tokens { get; set; }
-        IEnumerable<IExecutionStreamNode> IExecutionStream.Tokens => Tokens;
-    }
+    //}
+
+    //class JumpConditionalNegative : JumpConditional, IJumpConditionalNegative
+    //{
+
+    //}
+
+    //class ExecutionStream : IExecutionStream
+    //{
+    //    internal List<IExecutionStreamNode> Tokens { get; set; }
+    //    IEnumerable<IExecutionStreamNode> IExecutionStream.Tokens => Tokens;
+    //}
 }

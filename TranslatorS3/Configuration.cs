@@ -80,6 +80,9 @@ namespace TranslatorS3
 
             [Option("predescence-table-txt")]
             public static string PredescenceTableTxt { get; set; } = "Output\\predescence-table.txt";
+
+            [Option("statement-rules-xml")]
+            public static string StatementRulesXml { get; set; } = "Input\\statement-rules.xml";
         }
 
         [Category("parser")]

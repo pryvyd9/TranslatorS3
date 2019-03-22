@@ -1,4 +1,0 @@
-﻿[<AutoOpen>]
-module PolizParser.Types
-
-

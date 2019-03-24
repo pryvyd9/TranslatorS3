@@ -54,11 +54,21 @@ namespace SemanticParser
 
                 if (node is IStatement st)
                 {
-                    foreach (var innerStream in shouldGetRpn ? st.RpnStreams : st.Streams)
+                    if (shouldGetRpn)
                     {
-                        foreach (var innerNodes in GetConsistentStream(innerStream, shouldGetRpn))
+                        foreach (var innerNodes in GetConsistentStream(st.RpnStreamProcessed, shouldGetRpn))
                         {
                             yield return innerNodes;
+                        }
+                    }
+                    else
+                    {
+                        foreach (var innerStream in st.Streams)
+                        {
+                            foreach (var innerNodes in GetConsistentStream(innerStream, shouldGetRpn))
+                            {
+                                yield return innerNodes;
+                            }
                         }
                     }
                 }
@@ -103,7 +113,6 @@ namespace SemanticParser
     class Statement : DefinedExecutionNode, IStatement
     {
         public IEnumerable<IEnumerable<IExecutionStreamNode>> Streams { get; set; }
-        public IEnumerable<IEnumerable<IExecutionStreamNode>> RpnStreams { get; set; }
         public IEnumerable<IExecutionStreamNode> RpnStreamProcessed { get; set; }
         public int NodeId { get; set; }
         public bool IsStreamMaxCountSet { get; set; }
@@ -125,24 +134,4 @@ namespace SemanticParser
         public string Name { get; set; }
     }
 
-    //class Jump : ExecutionNode, IJump
-    //{
-
-    //}
-
-    //class JumpConditional : Jump, IJumpConditional
-    //{
-
-    //}
-
-    //class JumpConditionalNegative : JumpConditional, IJumpConditionalNegative
-    //{
-
-    //}
-
-    //class ExecutionStream : IExecutionStream
-    //{
-    //    internal List<IExecutionStreamNode> Tokens { get; set; }
-    //    IEnumerable<IExecutionStreamNode> IExecutionStream.Tokens => Tokens;
-    //}
 }

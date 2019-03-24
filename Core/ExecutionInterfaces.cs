@@ -60,7 +60,6 @@ namespace Core
     public interface IStatement : IDefinedStreamNode
     {
         IEnumerable<IEnumerable<IExecutionStreamNode>> Streams { get; }
-        IEnumerable<IEnumerable<IExecutionStreamNode>> RpnStreams { get; set; }
         IEnumerable<IExecutionStreamNode> RpnStreamProcessed { get; set; }
         int NodeId { get; }
         bool IsStreamMaxCountSet { get; }

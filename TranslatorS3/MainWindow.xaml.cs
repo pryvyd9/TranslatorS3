@@ -267,11 +267,13 @@ namespace TranslatorS3
             SemanticParserResult = ParserManager.SemanticParser.Parse();
 
 
-            ParserManager.RpnParser.ParsedTokens = ParsedTokens;
-            ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
-            RpnParserResult = ParserManager.RpnParser.Parse();
-
-
+            if (SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any())
+            {
+                ParserManager.RpnParser.ParsedTokens = ParsedTokens;
+                ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
+                RpnParserResult = ParserManager.RpnParser.Parse();
+            }
+           
 
             #region Show errors
 

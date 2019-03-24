@@ -1,16 +1,6 @@
 ﻿namespace RpnParser
 open StatementRuleParser
 
-module List =
-    //open System.Linq
-
-    let iList collection =
-        new System.Collections.Generic.List<'a>(collection:'a seq) :> System.Collections.Generic.IList<'a>
-
-    //let ofType<'a> (collection:#obj list) =
-    //    //collection |> List.choose(fun x -> match box x with :? 'a as a -> Some a | _ -> None)
-    //    collection |> List.choose(fun x -> match box x with :? 'a as a -> Some a | _ -> None)
-    //    //collection.OfType<'a>()
 
 [<AutoOpen>]
 module Types =
@@ -21,8 +11,124 @@ module Types =
 
     type Type = Core.StreamControlNodeType
 
+    type Log = {stream:string; stack:string; rpnStream:string;}
+    type IndexedLog = {pos:int;value:string;}
+
+    //type IndexingType = Reference of Definition | Definition of int ref | Command of hashAddress:string
+
+
+module Indexer =
+    let getIndexedNode index node =
+        match box node with
+        | :? Core.IVariable | :? Core.ILiteral | :? Core.IUserJump  -> index, 1, node
+        | :? Core.ICall -> index, 3, node
+        | :? Core.IJump -> index, 2, node
+        | :? Core.IDefinedLabel -> index, 1, node
+        | :? Core.ILabel -> index, 0, node // We ignore it as we don't want to see it in the command stream
+        | x -> 
+            match x with
+            | :? Core.IDefinedStreamNode ->
+                index, 1, node
+            | _ ->
+                index, 1, null
+
+    let getStringedNode (nodes:Core.INode seq) (indexedList:'a list) (node:'a) =
+        let index,_,node = node
+        let getObjectPosition item =
+            let index, _, _ = indexedList |> List.find(function _,_,node when box node = box item -> true | _ -> false)
+            index
+
+        match box node with 
+        | :? Core.IVariable as v -> [index, v.Name]
+        | :? Core.ILiteral as l -> [index, string l.Value]
+        | :? Core.ICall as c -> [index, (c.ParamCount |> string); index + 1, c.Address; index + 2, "call"]
+        | :? Core.IUserJump -> [index, "ujmp"]
+        //| :? Core.IUserJump as j-> 
+        //    let targetIndex,_,_ = indexedList |> List.find(function _,_,n when box n = box j.Label -> true | _ -> false)
+        //    [index, targetIndex |> string; index, "ujmp"]
+        | :? Core.IJumpConditionalNegative as j -> [index, getObjectPosition j.Label |> string; index + 1, "jn"]
+        | :? Core.IJump as j -> [index, getObjectPosition j.Label |> string; index + 1, "jmp"]
+        | :? Core.IDefinedLabel as l ->
+            let pos = indexedList |> List.findIndex(function i,_,_ when i = index -> true | _ -> false)
+            if pos < indexedList.Length - 1
+            then
+                let _,_,next = indexedList.[pos + 1]
+                match box next with
+                | :? Core.IUserJump -> []
+                | _ -> [index, l.Name + "+" + (index |> string)]
+            else
+                [index, l.Name + "+" + (index |> string)]
+
+        // We ignore it as we don't want to see it in the command stream 
+        //| :? Core.ILabel as l -> [index, l.Name + ":@+" + (index |> string)]
+        | :? Core.ILabel -> []
+        | x -> 
+            match x with
+            | :? Core.IDefinedStreamNode as s ->
+                [index, (nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name]
+            | _ ->
+                [index, "unsupported"]
+
+    let getIndexedList  (stream:Core.IExecutionStreamNode list) =
+           let mutable i = 0
+           let gg = stream |> List.map (fun x -> 
+               let indexed = getIndexedNode i x
+               let _, length, _ = indexed
+               i <- i + length
+               indexed
+           )
+           gg
+
+
+    let getIndexedNodes (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
+        let indexedNodeList = getIndexedList stream
+        let indexedStream = indexedNodeList |> List.collect(getStringedNode nodes indexedNodeList)
+
+        //let lastIndex, lastLength, _ = indexedNodeList |> List.last
+        //let totalLength = lastIndex + lastLength
+        indexedStream
+
+    
+    let getLoggableIndexed (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
+        getIndexedNodes stream nodes 
+        |> List.map (fun x -> {pos = fst x; value = snd x})
+
 module Parse = 
     
+    let log x =
+        Core.Logger.Add( "rpnParser", x)
+
+    let getIndexedNode index (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) node =
+        let getLabelPosition label =
+            stream |> List.findIndex(fun x -> x=label)
+
+        match box node with 
+        | :? Core.IVariable as v -> [index, v.Name]
+        | :? Core.ILiteral as l -> [index, string l.Value]
+        | :? Core.ICall as c -> [index, (c.ParamCount |> string); index + 1, c.Address; index + 2, " call"]
+        | :? Core.IUserJump -> [index, "ujmp"]
+        | :? Core.IJumpConditionalNegative as j -> [index, getLabelPosition j.Label |> string; index + 1, " jn"]
+        | :? Core.IJump as j -> [index, getLabelPosition j.Label |> string; index + 1, " jmp"]
+        | :? Core.ILabel as l -> [index, l.Name + ":@+" + (index |> string)]
+        | x -> 
+            match x with
+            | :? Core.IDefinedStreamNode as s ->
+                [index, (nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name]
+            | _ ->
+                [index, "unsupported"]
+        
+    let getIndexedString  (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
+        let mutable i = 0
+        let gg = stream |> List.collect (fun x -> 
+            let indexed = getIndexedNode i stream nodes x
+            i <- indexed |> List.last |> fst |> (+) 1
+            indexed
+        )
+        gg
+
+    let getLoggableIndexed (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
+        getIndexedString stream nodes 
+        |> List.map (fun x -> {pos = fst x; value = snd x})
 
 
     let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
@@ -37,10 +143,15 @@ module Parse =
         | x -> 
             match x with
             | :? Core.IDefinedStreamNode as s ->
-                (nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name
+                match nodes |> Seq.tryFind(fun y -> y.Id = s.GrammarNodeId) with
+                | Some n -> n.Name
+                | None -> "unsupported"
+                //(nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name
             | _ ->
                 "unsupported"
         ) |> String.concat " "
+
+
 
     let parse rootScope (nodes:Core.INode seq) (statementRules:Statement list) =
         let rec processScope (scope:Core.IScope) =
@@ -52,75 +163,83 @@ module Parse =
         and getRpnStream stream =
             let mutable stacks:OperatorStack ref list  = [ref[]]
 
-            let h = [
-                for node in stream do
-                    match box node with
-                    | :? Core.IVariable | :? Core.ILiteral -> yield node
-                    | :? Core.IDelimiter as delimiter ->
-                        match delimiter.Type with
-                        | Type.ScopeIn -> 
-                            processScope delimiter.ChildScope
+            let mutable rpnStream = []
 
-                            // Copy last(top) stack remains to stream if not empty.
-                            if not stacks.IsEmpty && not stacks.Head.Value.IsEmpty
-                            then
-                                for node in stacks.Head.Value -> node.executionNode
-                                stacks <- stacks.Tail
+            let put x = rpnStream <- rpnStream @ [x]
+            let putStack x = rpnStream <- rpnStream @ [for y in x -> y.executionNode]
+            let putStream x = rpnStream <- rpnStream @ (x |> List.ofSeq)
 
-                            for node in delimiter.ChildScope.RpnStream ->
-                                node
+            let mutable i = 0
 
-                        | Type.ScopeOut | Type.Breaker | Type.Streamer | Type.None -> 
-                            ()
+            for node in stream do
+                log {
+                    stream = getString (stream |> List.ofSeq |> List.skip i) nodes; 
+                    stack = if stacks.Length = 0 then "" else  getString (stacks.Head.Value |> List.map (fun x -> x.executionNode)) nodes; 
+                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
+                }
 
-                        | Type.ParensIn -> 
-                            stacks <- ref[] :: stacks
+                i <- i + 1
 
-                        | Type.ParensOut ->
-                            // Copy last(top) stack remains to stream.
-                            for node in stacks.Head.Value -> node.executionNode
+                match box node with
+                | :? Core.IVariable | :? Core.ILiteral -> put node
+                | :? Core.IDelimiter as delimiter ->
+                    match delimiter.Type with
+                    | Type.ScopeIn -> 
+                        processScope delimiter.ChildScope
+
+                        // Copy last(top) stack remains to stream if not empty.
+                        if not stacks.IsEmpty && not stacks.Head.Value.IsEmpty
+                        then
+                            putStack stacks.Head.Value
                             stacks <- stacks.Tail
 
-                        | Type.Statement ->
-                            failwith("Delimiter cannot be a statement.")
+                        putStream delimiter.ChildScope.RpnStream
 
-                        | _ ->
-                            failwith("Undefined delimiter type")
+                    | Type.ScopeOut | Type.Breaker | Type.Streamer ->
+                        ()
+                    | Type.ParensIn -> 
+                        stacks <- ref[] :: stacks
+                    | Type.ParensOut | Type.None -> 
+                        // Copy last(top) stack remains to stream.
+                        if stacks.Length > 0
+                        then
+                            putStack stacks.Head.Value
+                            stacks <- stacks.Tail
 
-                    | :? Core.IOperator as operator ->
-                        let grammarNode = nodes |> Seq.find(fun x -> x.Id = operator.GrammarNodeId) 
+                    | Type.Statement ->
+                        failwith("Delimiter cannot be a statement.")
 
-                        match grammarNode with
-                        | :? Core.IDefinedOperator as definedOperator ->
-                            while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
-                                yield stacks.Head.Value.Head.executionNode
-                                stacks.Head.Value <- stacks.Head.Value.Tail
-                            stacks.Head.Value <- {grammarNode = definedOperator; executionNode = node} :: stacks.Head.Value
-
-                        | _ ->
-                            failwith("not implemented")
-                    | :? Core.IStatement as statement ->
-
-                        let rpnStream = getStatementRpnStream statement
-
-                        statement.RpnStreamProcessed <- rpnStream
-
-                        for node in rpnStream ->
-                            node
-
-                    | :? Core.IDefinedLabel ->
-                        yield node
                     | _ ->
-                        failwith("")
+                        failwith("Undefined delimiter type")
 
-                // Copy all stacks remains to stream.
-                for stack in stacks do 
-                    for node in stack.Value -> 
-                        node.executionNode
-            ]
-            let g = getString h nodes
-            printfn "%A" g
-            Seq.ofList h;
+                | :? Core.IOperator as operator ->
+                    let grammarNode = nodes |> Seq.find(fun x -> x.Id = operator.GrammarNodeId) 
+
+                    match grammarNode with
+                    | :? Core.IDefinedOperator as definedOperator ->
+                        while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
+                            put stacks.Head.Value.Head.executionNode
+                            stacks.Head.Value <- stacks.Head.Value.Tail
+                        stacks.Head.Value <- {grammarNode = definedOperator; executionNode = node} :: stacks.Head.Value
+
+                    | _ ->
+                        failwith("not implemented")
+                | :? Core.IStatement as statement ->
+                    let rpnStream = getStatementRpnStream statement
+                    statement.RpnStreamProcessed <- rpnStream
+                    putStream rpnStream
+
+                | :? Core.IDefinedLabel -> put node
+                | _ ->
+                    failwith("")
+
+            // Copy all stacks remains to stream.
+            for stack in stacks do 
+                putStack stack.Value
+
+            Seq.ofList rpnStream;
+    
+
         and getStatementRpnStream (statement:Core.IStatement) =
             let statementName = (nodes |> Seq.find(fun x -> x.Id = statement.NodeId)).Name
             
@@ -155,8 +274,22 @@ module Parse =
                     | _ -> ()
             ]
             
-            let toRpmStream x =
+           
+            let put stream x =
+                log {
+                    stream = stream; 
+                    stack = ""; 
+                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
+                }
                 rpnStream <- rpnStream @ [x :> Core.IExecutionStreamNode]
+
+            let putStream x =
+                log {
+                    stream = getString (x |> List.ofSeq) nodes; 
+                    stack = ""; 
+                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
+                }
+                rpnStream <- rpnStream @ x
 
             let labelsWithName name = 
                 let labels = box >> (function :? Core.ILabel as a -> Some a | _ -> None) 
@@ -168,11 +301,10 @@ module Parse =
 
             for rule in case.rules do
                 match rule with     
-                | Stream stream ->
-                    rpnStream <- rpnStream @ (rpnStreams.[stream.id] |> List.ofSeq)
+                | Stream stream -> rpnStreams.[stream.id] |> List.ofSeq |> putStream
                 | Definition definition ->
                     match definition with
-                    | Label label -> labelsWithName label.name |> toRpmStream
+                    | Label label -> labelsWithName label.name |> put (label.name)
                           
                 | Reference reference ->
                     match reference with
@@ -183,21 +315,21 @@ module Parse =
                             member __.ParamCount = call.paramCount
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> toRpmStream
+                        } |> put ("call " + call.address + " with " + (call.paramCount |> string))
                     | Jmp jmp ->
                         {
                             new Core.IJump with
                             member __.Label = labelsWithName jmp.address
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> toRpmStream
+                        } |> put ("jmp " + jmp.address)
                     | Jn jn ->
                         {
                             new Core.IJumpConditionalNegative with
                             member __.Label = labelsWithName jn.address
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> toRpmStream
+                        } |> put  ("jn " + jn.address)
                     | Ujmp ->
                         let label = (statement.Streams |> Seq.last |> Seq.rev |> Seq.item 1) :?> Core.IDefinedLabel
                         {
@@ -205,49 +337,7 @@ module Parse =
                             member __.Label = label:>Core.ILabel
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> toRpmStream
-
-                        ////let rec tryFindLabelDeclaration name (scope:Core.IScope) =
-                        ////    match scope.Labels |> Seq.tryFind (fun n -> n.Name = name) with
-                        ////    | Some foundLabel ->
-                        ////        Some foundLabel
-                        ////    | None ->
-                        ////        match scope.ChildrenScopes |> List.ofSeq with
-                        ////        | [] -> None
-                        ////        | scopes ->
-                        ////            let rec find =
-                        ////                function
-                        ////                | [] -> None
-                        ////                | h::t ->
-                        ////                    match tryFindLabelDeclaration name h with
-                        ////                    | None -> find t
-                        ////                    | label -> label
-
-                        ////            find scopes
-                                    
-
-                        //let rec tryFindLabelDeclaration name (scope:Core.IScope) =
-                        //    match scope.Labels |> Seq.tryFind (fun n -> n.Name = name) with
-                        //    | Some foundLabel ->
-                        //        Some foundLabel
-                        //    | None ->
-                        //        if isNull scope.ParentScope
-                        //        then
-                        //            None
-                        //        else 
-                        //            tryFindLabelDeclaration name scope.ParentScope
-
-                        //match tryFindLabelDeclaration label.Name statement.Scope with
-                        //| Some label ->
-                        //    {
-                        //        new Core.IUserJump with
-                        //        member __.Label = label
-                        //        member __.Scope = statement.Scope
-                        //        member __.Type = Type.None
-                        //    } |> toRpmStream
-                        //| None ->
-                        //    failwith("Undeclared label referenced.")
-                        
+                        } |> put  ("ujmp " + label.Name)
             
             rpnStream
 
@@ -257,22 +347,41 @@ module Parse =
 
 
 type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
-    //let operators = grammarNodes |> Seq.choose(function | :? Core.IDefinedOperator as op -> Some(op) | _ -> None)
-
-    //let priorityTable = dict [ for op in operators -> op, op.Priority ]
 
     let statementRules = StatementRuleParser.parse statementRulesXmlPath
-
 
     member val RootScope:Core.IScope = null with get, set
     member val ParsedTokens:Core.IParsedToken seq = null with get, set
 
-
     member this.Parse() =
         
-        Parse.parse this.RootScope grammarNodes statementRules
+        Core.Logger.Clear("rpnParser");
+        Core.Logger.Clear("rpnParserIndexed");
+
+        Parse.log {
+            stream = Parse.getString (this.RootScope.GetConsistentStream() |> List.ofSeq) grammarNodes; 
+            stack = ""; 
+            rpnStream = ""; 
+        }
+
+        try
+            Parse.parse this.RootScope grammarNodes statementRules
+        with x -> 
+            Core.Logger.Add("system.RpmParser", x.Message)
+
+        Indexer.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        //Parse.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        |> List.iter (fun x -> Core.Logger.Add("rpnParserIndexed", x))
+
         let str = Parse.getString (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+
         printfn "%A" str
+        Parse.log {
+            stream = ""; 
+            stack = ""; 
+            rpnStream = str; 
+        }
+
 
         {
             new Core.IRpnParserResult with

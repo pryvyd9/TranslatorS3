@@ -169,8 +169,13 @@ namespace SemanticParser
                               ?? throw new NullReferenceException(
                                   "In parsed tokens there was a null element.");
 
+            var node = nodes.FirstOrDefault(n => n.Id == parsedToken.Id);
 
-            var node = nodes.First(n => n.Id == parsedToken.Id);
+            if (node is null)
+            {
+                return CreateDelimiter(StreamControlNodeType.None);
+            }
+            //var node = nodes.First(n => n.Id == parsedToken.Id);
 
             switch (node.ExecuteStreamNodeType)
             {

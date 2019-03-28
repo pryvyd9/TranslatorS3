@@ -21,6 +21,9 @@ namespace Core
         string Name { get; }
 
         string ToString();
+
+        string ExecuteStreamNodeType { get; }
+
     }
 
     public interface ITerminal : INode
@@ -28,6 +31,22 @@ namespace Core
         bool IsControl { get; }
 
         bool IsClassified { get; }
+    }
+
+    public interface IDefinedStatement : ITerminal
+    {
+        string[] Streamers { get; }
+
+        string[] Breakers { get; }
+
+        bool IsStreamMaxCountSet { get; }
+
+        int StreamMaxCount { get; }
+    }
+
+    public interface IDefinedOperator : ITerminal
+    {
+        int Priority { get; }
     }
 
     public interface IClass : INode

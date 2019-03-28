@@ -14,6 +14,7 @@ namespace TranslatorS3
         internal static ITokenParser TokenParser { get; set; }
         internal static ISyntaxParser SyntaxParser { get; set; }
         internal static ISemanticParser SemanticParser { get; set; }
+        internal static IRpnParser RpnParser { get; set; }
 
         /// <summary>
         /// 
@@ -51,17 +52,22 @@ namespace TranslatorS3
                 throw new Exception("Created instance does not implement the IParser interface.");
 
 
-            if (parser is ITokenParser tokenParser)
+
+
+            switch (parser)
             {
-                TokenParser = tokenParser;
-            }
-            else if (parser is ISyntaxParser syntaxParser)
-            {
-                SyntaxParser = syntaxParser;
-            }
-            else if (parser is ISemanticParser semanticParser)
-            {
-                SemanticParser = semanticParser;
+                case ITokenParser tokenParser:
+                    TokenParser = tokenParser;
+                    break;
+                case ISyntaxParser syntaxParser:
+                    SyntaxParser = syntaxParser;
+                    break;
+                case ISemanticParser semanticParser:
+                    SemanticParser = semanticParser;
+                    break;
+                case IRpnParser rpnParser:
+                    RpnParser = rpnParser;
+                    break;
             }
 
             return parser as IParser;

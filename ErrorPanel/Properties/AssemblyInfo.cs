@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Editor")]
+[assembly: AssemblyTitle("ErrorPanel")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("Editor")]
-[assembly: AssemblyCopyright("Copyright © Microsoft 2018")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("ErrorPanel")]
+[assembly: AssemblyCopyright("Copyright ©  2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("52a9d6ca-ecce-4f03-902c-1923e67e9e47")]
+[assembly: Guid("ceef88d4-c7e9-449a-8e81-1822ffe163db")]
 
 // Version information for an assembly consists of the following four values:
 //

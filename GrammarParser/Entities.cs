@@ -32,10 +32,13 @@ namespace GrammarParser
 
         public string Name { get; set; }
 
+        public string ExecuteStreamNodeType { get; set; }
+
         public override string ToString()
         {
             return $"{Name}";
         }
+
     }
 
     public class Class : Node, IClass, INonterminal
@@ -63,13 +66,27 @@ namespace GrammarParser
         public bool IsClassified { get; set; }
     }
 
+    public class DefinedStatement : Terminal, IDefinedStatement
+    {
+        public string[] Streamers { get; set; }
+
+        public string[] Breakers { get; set; }
+
+        public bool IsStreamMaxCountSet { get; set; }
+
+        public int StreamMaxCount { get; set; }
+    }
+
+    public class DefinedOperator : Terminal, IDefinedOperator
+    {
+        public int Priority { get; set; }
+    }
+
     public class DefinedToken : Medium, IDefinedToken
     {
         public string TokenClass { get; set; }
 
         public int TokenClassId { get; set; }
-
-
     }
 
     public class Medium : Node, IMedium

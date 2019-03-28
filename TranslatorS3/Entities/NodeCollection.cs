@@ -29,6 +29,8 @@ namespace TranslatorS3.Entities
 
         public IMedium Axiom { get; internal set; }
 
+        public IMedium ExpressionRoot { get; internal set; }
+
 
         public int Count => SortedNodes.Count;
 

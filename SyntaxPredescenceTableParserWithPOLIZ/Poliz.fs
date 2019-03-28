@@ -41,12 +41,18 @@ let calculate (expressionStack:Member list) =
     inFunc [] (expressionStack |> List.rev) 
 
 let operatorFuncs = dict[
-    "+",(function f::s::tail -> s + f :: tail | _ -> []);
-    "-",(function f::s::tail -> s - f :: tail | _ -> []);
-    "/",(function f::s::tail -> s / f :: tail | _ -> []);
-    "*",(function f::s::tail -> s * f :: tail | _ -> []);
-    "--",(function f::tail -> -f :: tail | _ -> []);
-    "^",(function f::s::tail -> (float s ** float f |> int) :: tail | _ -> []);
+    "+",  (function f::s::tail -> s + f :: tail | _ -> []);
+    "-",  (function f::s::tail -> s - f :: tail | _ -> []);
+    "/",  (function f::s::tail -> s / f :: tail | _ -> []);
+    "*",  (function f::s::tail -> s * f :: tail | _ -> []);
+    "--", (function f::tail    -> -f    :: tail | _ -> []);
+    "^",  (function f::s::tail -> (float s ** float f |> int) :: tail | _ -> []);
+    "<",  (function f::s::tail -> (if s <  f then 1 else 0)   :: tail | _ -> []);
+    ">",  (function f::s::tail -> (if s >  f then 1 else 0)   :: tail | _ -> []);
+    "<=", (function f::s::tail -> (if s <= f then 1 else 0)   :: tail | _ -> []);
+    ">=", (function f::s::tail -> (if s >= f then 1 else 0)   :: tail | _ -> []);
+    "==", (function f::s::tail -> (if s =  f then 1 else 0)   :: tail | _ -> []);
+    "!=", (function f::s::tail -> (if s <> f then 1 else 0)   :: tail | _ -> []);
 ]
 
 
@@ -58,9 +64,9 @@ let getExpression() =
             | :? Core.IDefinedToken ->
                 let pn =  parsedNodes.[index]
                 match pn.TokenClassId with
-                | 3 -> inFunc tail @ [ Variable (ref "NaN", pn.Name) ]
+                | 0 -> inFunc tail @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
+                | 1 -> inFunc tail @ [ Variable (ref "NaN", pn.Name) ]
                 | 2 -> inFunc tail @ [ Constant (int pn.Name) ]
-                | _ -> inFunc tail @ [ Operator (pn.Name, operatorFuncs.[pn.Name]) ]
             | _ -> inFunc tail @ [ Undefined (node:>Core.INode).Name ]
         | _ -> []
     inFunc polizList
@@ -123,6 +129,12 @@ let launchWindow() =
         |> List.choose (function Variable (value, name) -> Some (value, name) | _ -> None)
         |> List.rev
 
+    //let duplicateVariables = variables |> List.groupBy (fun x -> snd x)
+
+    //duplicateVariables |> List.iter(fun group -> snd group |> List.iter(fun v -> fst v <-  fst (snd group).Head))
+
+    //fst (snd duplicateVariables.[1]).[1] := "here"
+
     for (value, name) in variables 
         do
             let variableField = StackPanel(Orientation = Orientation.Horizontal)
@@ -162,5 +174,5 @@ let poliz (idsToChange:(int*int) list) (nodes:Core.INode list) =
     then
         if tokens.Length = 1
         then polizList <- polizList @ tokens
-    else 
-        launchWindow()
+    elif polizList.Length > 0
+    then launchWindow()

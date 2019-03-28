@@ -7,46 +7,388 @@ using Core;
 
 namespace SemanticParser
 {
+
+  
+
     class SemanticParser : ISemanticParser
     {
         public IEnumerable<IParsedToken> ParsedTokens { private get; set; }
+
+        private readonly INodeCollection nodes;
 
         private readonly IClassTable classTable;
 
         private List<IParserError> errors;
 
 
-        public SemanticParser(IClassTable classTable)
+        private readonly Dictionary<int /* id */, (int[] streamers, int[] breakers)> statements;
+
+        public string AssignmentName { get; } = "=";
+        public string StatementDelimiterName { get; } = ";";
+
+
+
+
+        public SemanticParser(IClassTable classTable, INodeCollection nodes)
         {
             this.classTable = classTable;
+            this.nodes = nodes;
+
+            //execClasses = nodes
+            //    .Where(n => !string.IsNullOrWhiteSpace(n.ExecuteStreamNodeType))
+            //    .ToDictionary(n => n.ExecuteStreamNodeType, n => n.Id);
+
+            statements = nodes
+                .OfType<ITerminal>()
+                .OfType<IDefinedStatement>()
+                //.Where(n => n.ExecuteStreamNodeType == "statement")
+                .Select(n => (
+                    id: n.Id, 
+                    streamers: nodes
+                        //.OfType<IDefinedStatement>()
+                        .Where(m => n.Streamers.Contains(m.Name))
+                        .Select(m => m.Id)
+                        .ToArray(),
+                    breakers: nodes
+                        .Where(m => n.Breakers.Contains(m.Name))
+                        .Select(m => m.Id)
+                        .ToArray()))
+                .ToDictionary(n => n.id, n => (n.streamers, n.breakers));
         }
 
 
-        public IParserResult Parse()
+
+        public ISemanticParserResult Parse()
         {
-            if (ParsedTokens == null || ParsedTokens.Count() == 0)
+            if (ParsedTokens == null || !ParsedTokens.Any())
                 return new SemanticParserResult();
 
             errors = new List<IParserError>();
 
+            // Create scopes and streams.
+            var rootScope = new Scope
+            {
+                Variables = new List<IVariable>(),
+                Labels = new List<ILabel>(),
+                ChildrenScopes = new List<IScope>(),
+            };
+
+            var rootStream = ParseStream(rootScope, null, ParsedTokens.GetEnumerator());
+
+            rootScope.Stream = rootStream;
+
+            // Check.
+
+            CheckIdentifiers(rootScope);
+
             CheckUndefined();
 
-            CheckLabels();
-
-            CheckIdentifiers();
+            CheckLabels(rootScope);
 
             return new SemanticParserResult
             {
                 Errors = errors,
+                RootScope = rootScope,
             };
         }
+
+        #region Scope building
+
+        private bool TryFindVariableDeclaration(string name, IScope scope, out IVariable foundVariable)
+        {
+            foundVariable = scope.Variables.FirstOrDefault(n => n.Name == name);
+
+            if (foundVariable is null)
+            {
+                if (scope.ParentScope is null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return TryFindVariableDeclaration(name, scope.ParentScope, out foundVariable);
+                }
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
+        {
+            if (scope.ParentScope is null)
+            {
+                foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
+
+                if (foundLabel is null)
+                    return false;
+
+                return true;
+            }
+
+            return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
+        }
+
+        //private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
+        //{
+        //    foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
+
+        //    if (foundLabel is null)
+        //    {
+        //        if (scope.ParentScope is null)
+        //        {
+        //            return false;
+        //        }
+        //        else
+        //        {
+        //            return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        return true;
+        //    }
+        //}
+        private object GetValueFromParsedToken(IParsedToken token)
+        {
+            if (int.TryParse(token.Name, out var value))
+            {
+                return value;
+            }
+
+            throw new Exception("Values other than int are not supported.");
+        }
+
+
+        private IExecutionStreamNode ParseNode(
+            IScope scope,
+            IEnumerator<IParsedToken> enumerator)
+        {
+             var parsedToken = enumerator.Current
+                              ?? throw new NullReferenceException(
+                                  "In parsed tokens there was a null element.");
+
+            var node = nodes.FirstOrDefault(n => n.Id == parsedToken.Id);
+
+            if (node is null)
+            {
+                return CreateDelimiter(StreamControlNodeType.None);
+            }
+            //var node = nodes.First(n => n.Id == parsedToken.Id);
+
+            switch (node.ExecuteStreamNodeType)
+            {
+                case "variable":
+                    if (TryFindVariableDeclaration(parsedToken.Name, scope, out var foundVariable))
+                    {
+                        return foundVariable;
+                    }
+
+                    var variable = new Variable
+                    {
+                        Scope = scope,
+                        InStringPosition = parsedToken.InStringPosition,
+                        Name = parsedToken.Name,
+                        GrammarNodeId = parsedToken.Id,
+                    };
+
+                    scope.Variables.Add(variable);
+                    return variable;
+                case "label":
+                    if (TryFindLabelDeclaration(parsedToken.Name, scope, out var foundLabel))
+                    {
+                        return foundLabel;
+                    }
+
+                    var label = new DefinedLabel
+                    {
+                        Scope = scope,
+                        InStringPosition = parsedToken.InStringPosition,
+                        Name = parsedToken.Name,
+                        GrammarNodeId = parsedToken.Id,
+                    };
+
+                    AddLabel(label, scope);
+                    //scope.Labels.Add(label);
+                    return label;
+                case "literal":
+                    var literal = new Literal
+                    {
+                        Scope = scope,
+                        InStringPosition = parsedToken.InStringPosition,
+                        Value = GetValueFromParsedToken(parsedToken),
+                        GrammarNodeId = parsedToken.Id,
+                    };
+                    return literal;
+                case "operator":
+                    var @operator = new Operator
+                    {
+                        Scope = scope,
+                        InStringPosition = parsedToken.InStringPosition,
+                        GrammarNodeId = parsedToken.Id,
+                    };
+                    return @operator;
+                case "statement":
+                {
+                    var statement = new Statement
+                    {
+                        InStringPosition = parsedToken.InStringPosition,
+                        NodeId = parsedToken.Id,
+                        Type = StreamControlNodeType.Statement,
+                        Scope = scope,
+                        GrammarNodeId = parsedToken.Id,
+                    };
+
+                    var streams = new List<IEnumerable<IExecutionStreamNode>>();
+
+                    bool Break() => streams.Last().Last().Type == StreamControlNodeType.Breaker
+                                || ((IDefinedStatement) node).IsStreamMaxCountSet
+                                && ((IDefinedStatement) node).StreamMaxCount <= streams.Count;
+                    do
+                    {
+                        var str = ParseStream(scope, statement, enumerator);
+
+                        if (!str.Any())
+                        {
+                            break;
+                        }
+
+                        streams.Add(str);
+
+                    } while (!Break());
+
+                    statement.Streams = streams;
+
+                    return statement;
+                }
+                case "delimiter":
+                    return CreateDelimiter(StreamControlNodeType.None);
+                case "parens-in":
+                    return CreateDelimiter(StreamControlNodeType.ParensIn);
+                case "parens-out":
+                    return CreateDelimiter(StreamControlNodeType.ParensOut);
+                case "scope-in":
+                    return CreateDelimiter(StreamControlNodeType.ScopeIn);
+                case "scope-out":
+                    return CreateDelimiter(StreamControlNodeType.ScopeOut);
+                default:
+                    return CreateDelimiter(StreamControlNodeType.None);
+            }
+
+            void AddLabel(ILabel label, IScope s)
+            {
+                if (s.ParentScope is null)
+                {
+                    s.Labels.Add(label);
+                }
+                else
+                {
+                    AddLabel(label, s.ParentScope);
+                }
+            }
+
+            Delimiter CreateDelimiter(StreamControlNodeType type)
+            {
+                return new Delimiter
+                {
+                    Scope = scope,
+                    GrammarNodeId = parsedToken.Id,
+                    InStringPosition = parsedToken.InStringPosition,
+                    Type = type,
+                };
+            }
+
+        }
+
+        private IEnumerable<IExecutionStreamNode> ParseStream(
+            IScope scope, 
+            IStatement currentStatement, 
+            IEnumerator<IParsedToken> enumerator)
+        {
+            var stream = new List<IExecutionStreamNode>();
+            
+
+            while (enumerator.MoveNext())
+            {
+                var node = ParseNode(scope, enumerator);
+               
+                var parsedNode = ParsedTokens
+                    .First(n => n.InStringPosition == ((IDefinedStreamNode)node).InStringPosition);
+
+                stream.Add(node);
+
+                // Change scope if braces met.
+                switch (node.Type)
+                {
+                    case StreamControlNodeType.ScopeIn:
+                        var innerScope = new Scope
+                        {
+                            ParentScope = scope,
+                            Variables = new List<IVariable>(),
+                            Labels = new List<ILabel>(),
+                            ChildrenScopes = new List<IScope>(),
+                        };
+                        scope.ChildrenScopes.Add(innerScope);
+
+                        innerScope.Stream = ParseStream(innerScope, null, enumerator);
+
+                        ((Delimiter)node).ChildScope = innerScope;
+                        
+                        break;
+                    case StreamControlNodeType.ScopeOut:
+                        return stream;
+                }
+
+                if (currentStatement is null) continue;
+
+                var lastStatement = stream.LastOrDefault(n => n is IStatement);
+
+                if (lastStatement != null && lastStatement.Scope == currentStatement.Scope)
+                {
+                    return stream;
+                }
+
+                var (streamers, breakers) = statements[currentStatement.NodeId];
+
+
+                // Breaker has higher priority and thus comes first.
+                if (breakers.Contains(parsedNode.Id))
+                {
+                    ((ExecutionNode)node).Type = StreamControlNodeType.Breaker;
+
+                    if (node.Scope == currentStatement.Scope)
+                    {
+                        return stream;
+                    }
+                }
+
+                if (streamers.Contains(parsedNode.Id))
+                {
+                    ((ExecutionNode)node).Type = StreamControlNodeType.Streamer;
+
+                    if (node.Scope == currentStatement.Scope)
+                    {
+                        return stream;
+                    }
+                }
+
+            }
+
+
+            return stream;
+        }
+
+
+        #endregion
+
 
         private void CheckUndefined()
         {
             // Check Undefined lexems
-            var undefinedTokens = GetTokensOfClass("undefined");
+            var undefinedTokens = GetTokensOfClass("undefined").ToArray();
 
-            if (undefinedTokens.Count() == 0)
+            if (!undefinedTokens.Any())
                 return;
 
             foreach (var token in undefinedTokens)
@@ -57,21 +399,20 @@ namespace SemanticParser
                 {
                     Tag = "lexical",
                     Message = message,
-                    TokensOnError = new List<IParsedToken> { token },
+                    TokensOnError = new [] { token },
                 });
             }
         }
 
-        private void CheckLabels()
-        {
-            var labels = GetTokensOfClass("label");
 
-            if (labels.Count() == 0)
+        private void CheckLabels(IScope rootScope)
+        {
+            var labels = GetTokensOfClass("label").ToArray();
+
+            if (labels.Length == 0)
                 return;
 
             var labelNames = labels.Select(n => n.Name).Distinct();
-
-            int labelClassIndex = labels.First().TokenClassId;
 
             var tokens = ParsedTokens.ToList();
 
@@ -80,32 +421,37 @@ namespace SemanticParser
             {
                 var instances = tokens.FindAll(n => n.Name == labelName);
 
-                var declarations = instances.Where((instance) =>
+                var declarations = instances.Where(instance =>
                 {
                     int index = tokens.IndexOf(instance);
 
                     if (index == 0)
                         return true;
 
-                    if (index > 0)
+                    return index > 0 && tokens[index - 1].Name != "goto";
+                }).ToArray();
+
+                // Set declaration position to first declaration
+                if (declarations.Length == 1)
+                {
+                    var declaredLabels = rootScope.Labels.OfType<IDefinedLabel>().Where(n => n.Name == labelName);
+
+                    foreach (var declaredLabel in declaredLabels)
                     {
-                        if (tokens[index - 1].Name != "goto")
-                        {
-                            return true;
-                        }
+                        ((DefinedLabel)declaredLabel).InStringPosition = declarations[0].InStringPosition;
                     }
+                }
 
-                    return false;
-                });
 
-                if (declarations.Count() > 1)
+                // Show errors if multiple declaration
+                if (declarations.Length > 1)
                 {
                     var positions = declarations.Select(n => (n.RowIndex, n.InRowPosition));
 
                     var positionsString = string.Join(",", positions.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"));
 
-                    string message = $"Attempt to declare lable {labelName} more then once. " +
-                        $"Found {declarations.Count()} declarations " +
+                    string message = $"Attempt to declare label {labelName} more then once. " +
+                        $"Found {declarations.Length} declarations " +
                             $"at {{{positionsString}}}";
 
                     errors.Add(new SemanticParserError
@@ -115,12 +461,9 @@ namespace SemanticParser
                         TokensOnError = declarations,
                     });
                 }
-                else if (declarations.Count() == 0)
+                else if (declarations.Length == 0)
                 {
-
-                    var undeclaredInstances = instances.Except(declarations);
-
-                    var positions = undeclaredInstances.Select(n => (n.RowIndex, n.InRowPosition));
+                    var undeclaredInstances = instances.Except(declarations).ToArray();
 
                     var positionsString = string.Join(",", undeclaredInstances.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"));
 
@@ -137,72 +480,196 @@ namespace SemanticParser
             }
         }
 
-        private void CheckIdentifiers()
+        //private void CheckLabels(IScope rootScope)
+        //{
+
+        //    var stream = rootScope.GetConsistentStream().ToArray();
+
+
+
+        //    var labels = stream
+        //        .Select((n,i) => (i,n))
+        //        .Where(n => n.n is IDefinedLabel)
+        //        .Select(n => (index: n.i, label: (IDefinedLabel)n.n)).ToArray();
+
+        //    if (labels.Length == 0)
+        //        return;
+
+        //    var tokens = ParsedTokens.ToList();
+
+        //    // Get declarations
+
+        //    var declarations = labels.Where(n =>
+        //    {
+        //        if (n.index == 0)
+        //            return true;
+
+        //        if (stream[n.index - 1] is IStatement statement
+        //            && nodes.First(m => m.Id == statement.GrammarNodeId).Name == "goto")
+        //        {
+        //            return false;
+        //        }
+
+        //        return true;
+        //    });
+
+        //    // Check declaration interference
+
+        //    var scopedDeclarations = declarations.GroupBy(n => n.label.Scope);
+
+        //    foreach (var scopedDeclaration in scopedDeclarations.Where(n => n.Count() > 1))
+        //    {
+        //        // Addressing same label
+        //        var equalDeclarations = scopedDeclaration.GroupBy(n => n.label);
+
+        //        foreach (var equalDeclaration in equalDeclarations)
+        //        {
+        //            var instances = equalDeclaration.Select(n => tokens[n.index]).ToArray();
+
+        //            var message = $"Multiple declaration of label '{instances[0].Name}' " +
+        //                $"at {{{string.Join(",", instances.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"))}}}";
+
+        //            errors.Add(new SemanticParserError
+        //            {
+        //                Tag = "semantic",
+        //                Message = message,
+        //                TokensOnError = instances,
+        //            });
+
+        //            var referencesToEqualDeclarations = labels.Where(n => !scopedDeclaration.Any(m => m.index == n.index) && equalDeclaration.Contains(n));
+
+        //            instances = referencesToEqualDeclarations.Select(n => tokens[n.index]).ToArray();
+
+        //            message = $"Label reference '{instances[0].Name}' is ambigous " +
+        //               $"at {{{string.Join(",", instances.Select(n => $"({n.RowIndex + 1};{n.InRowPosition + 1})"))}}}";
+
+        //            errors.Add(new SemanticParserError
+        //            {
+        //                Tag = "semantic",
+        //                Message = message,
+        //                TokensOnError = instances,
+        //            });
+        //        }
+
+        //    }
+
+
+
+        //    void AddError(IParsedToken instance, string message)
+        //    {
+        //        errors.Add(new SemanticParserError
+        //        {
+        //            Tag = "semantic",
+        //            Message = message,
+        //            TokensOnError = new[] { instance },
+        //        });
+        //    }
+        //}
+
+
+        private void CheckIdentifiers(IScope rootScope)
         {
-            var identifiers = GetTokensOfClass("identifier");
+            var declaredVariables = new List<IVariable>();
 
-            if (identifiers.Count() == 0)
-                return;
+            // Level all streams to one.
+            var allNodes = rootScope.GetConsistentStream().ToList();
 
-            var identifierNames = identifiers.Select(n => n.Name).Distinct();
-
-            int identifierClassIndex = identifiers.First().TokenClassId;
-
-
-            var tokens = ParsedTokens.ToList();
-
-            // Check Identifiers
-            foreach (var identifierName in identifierNames)
+            for (int i = 0; i < allNodes.Count; i++)
             {
-                var instances = tokens.FindAll(n => n.Name == identifierName);
+                // Skip if is not a variable or is already declared.
+                if (!(allNodes[i] is IVariable variable) || declaredVariables.Contains(variable)) continue;
 
-                // Add errors for each instance
-                // used before its assignment.
-
-                // Once assignment is found - break.
-                // All instances left will be valid.
-                foreach (var instance in instances)
+                // If next node is an assignment operator
+                // then declare variable.
+                // Otherwise throw an error.
+                if (i < allNodes.Count - 1
+                    && allNodes[i + 1] is IOperator op 
+                    && nodes.First(n => n.Id == op.GrammarNodeId).Name == AssignmentName)
                 {
-                    int index = tokens.IndexOf(instance);
+                    // Check right part of the expression.
+                    // It must not make use of declaring variable.
+                    // This is applicable though
+                    // x = 2 + x = 7;
+                    // as x is assigned before the use of it.
 
-                    // Check on the left
-                    if (index > 0)
+                    // Fix declaration position if it is the case.
+
+                    var rightPart = allNodes
+                        .Skip(i + 1)
+                        .TakeWhile(n =>!(n is IDelimiter && GetNodeById(((IDefinedStreamNode)n).GrammarNodeId).Name == StatementDelimiterName))
+                        .ToList();
+
+                    var lastMention = rightPart
+                        .OfType<IDefinedStreamNode>()
+                        .LastOrDefault(n => n.InStringPosition == variable.InStringPosition);
+
+                    if (lastMention != null)
                     {
-                        if (tokens[index - 1].Name == "read")
+                        var lastMentionPosition = rightPart.LastIndexOf(lastMention);
+
+                        var lastMentionPositionFixed = lastMentionPosition + i + 1;
+
+                        var parsedToken = ParsedTokens.ElementAt(lastMentionPositionFixed);
+
+
+                        if (allNodes[lastMentionPositionFixed + 1] is IOperator op1
+                            && nodes.First(n => n.Id == op1.GrammarNodeId).Name == "=")
                         {
-                            break;
+                           // Fix declaration position.
+
+                            ((Variable)variable).InStringPosition = parsedToken.InStringPosition;
+
+                            declaredVariables.Add((IVariable)lastMention);
+                        }
+                        else
+                        {
+                            // Variable used before it was assigned.
+                            string message = $"Attempt to use variable {parsedToken.Name} in its own declaration" +
+                                             $" at ({parsedToken.RowIndex + 1};{parsedToken.InRowPosition + 1}).";
+
+                            AddError(parsedToken, message);
                         }
                     }
-
-                    // Check on the right
-                    if (index < tokens.Count - 1)
+                    else
                     {
-                        if (tokens[index + 1].Name == "=")
-                        {
-                            break;
-                        }
+                        declaredVariables.Add(variable);
                     }
-
-                    AddError(instance);
                 }
-
-                void AddError(IParsedToken instance)
+                else if (i > 0
+                         && allNodes[i - 1] is IStatement st 
+                         && GetNodeById(st.GrammarNodeId).Name == "read")
                 {
-                    string message = $"Attempt to use an unassigned" +
-                                $" variable {instance.Name} at ({instance.RowIndex + 1};{instance.InRowPosition + 1}).";
+                    // Assigned from read stream.
+                    declaredVariables.Add(variable);
+                }
+                else
+                {
+                    // Variable used before it was assigned.
+                    var parsedToken =  ParsedTokens.ElementAt(i);
 
-                    errors.Add(new SemanticParserError
-                    {
-                        Tag = "semantic",
-                        Message = message,
-                        TokensOnError = new List<IParsedToken> { instance },
-                    });
+                    string message = $"Attempt to use an unassigned variable {parsedToken.Name}" +
+                                     $" at ({parsedToken.RowIndex + 1};{parsedToken.InRowPosition + 1}).";
+
+                    AddError(parsedToken, message);
                 }
             }
 
-
+            void AddError(IParsedToken instance, string message)
+            {
+                errors.Add(new SemanticParserError
+                {
+                    Tag = "semantic",
+                    Message = message,
+                    TokensOnError = new [] { instance },
+                });
+            }
         }
 
+
+        private INode GetNodeById(int id)
+        {
+            return nodes.First(n => n.Id == id);
+        }
 
         private IEnumerable<IParsedToken> GetTokensOfClass(string @class)
         {

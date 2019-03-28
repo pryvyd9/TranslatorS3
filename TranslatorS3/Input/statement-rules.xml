@@ -66,13 +66,13 @@ Remarks:
 
 <statements>
   <statement name="write">
-    <c>
+    <c stream-count="1">
       <s id="0"/>
       <r call="system.io.write" param-count="1"/>
     </c>
   </statement>
   <statement name="read">
-    <c>
+    <c stream-count="1">
       <s id="0"/>
       <r call="system.io.read" param-count="1"/>
     </c> 
@@ -95,7 +95,7 @@ Remarks:
     </c>
   </statement>
   <statement name="while">
-    <c>
+    <c stream-count="2">
       <d label="cond"/>
       <s id="0"/>
       <r jn="ew"/>
@@ -105,7 +105,7 @@ Remarks:
     </c>
   </statement>
   <statement name="goto">
-    <c>
+    <c stream-count="1">
       <s id="0"/>
       <r ujmp="true"/>
     </c>

@@ -14,16 +14,22 @@ module Types =
     type Log = {stream:string; stack:string; rpnStream:string;}
     type IndexedLog = {pos:int;value:string;}
 
-    //type IndexingType = Reference of Definition | Definition of int ref | Command of hashAddress:string
-
 
 module Indexer =
-    let getIndexedNode index node =
+    let getIndexedNode index node stream =
         match box node with
         | :? Core.IVariable | :? Core.ILiteral | :? Core.IUserJump  -> index, 1, node
         | :? Core.ICall -> index, 3, node
         | :? Core.IJump -> index, 2, node
-        | :? Core.IDefinedLabel -> index, 1, node
+        | :? Core.IDefinedLabel as l-> 
+            //match stream 
+            //    |> List.filter((=) node)
+            //    |> List.map(fun x -> stream |> List.findIndex((=) x))
+            //    |> List.tryFind(fun x -> if stream.Length > (x + 1) then (stream |> (List.item (x + 1)) |> box) :? Core.IUserJump |> not else true)
+            //        with
+            //        | Some s -> index, 1, node
+            //        | _ -> index, 0, node
+            index, 1, node
         | :? Core.ILabel -> index, 0, node // We ignore it as we don't want to see it in the command stream
         | x -> 
             match x with
@@ -42,12 +48,28 @@ module Indexer =
         | :? Core.IVariable as v -> [index, v.Name]
         | :? Core.ILiteral as l -> [index, string l.Value]
         | :? Core.ICall as c -> [index, (c.ParamCount |> string); index + 1, c.Address; index + 2, "call"]
-        | :? Core.IUserJump -> [index, "ujmp"]
-        //| :? Core.IUserJump as j-> 
-        //    let targetIndex,_,_ = indexedList |> List.find(function _,_,n when box n = box j.Label -> true | _ -> false)
-        //    [index, targetIndex |> string; index, "ujmp"]
+        //| :? Core.IUserJump -> [index, "ujmp"]
+        | :? Core.IUserJump as j-> 
+            //let targetIndex,_,_ = indexedList |> List.find(function _,_,n when box n = box j.Label -> true | _ -> false)
+
+            let h = indexedList 
+                          |> List.filter(function _,_,n when box n = box j.Label -> true | _ -> false)
+                          |> List.map(fun x -> indexedList |> List.findIndex((=) x))
+
+            let g = h |> List.find(fun x -> 
+                if indexedList.Length > (x + 1) 
+                then 
+                    let _,_,node = indexedList |> (List.item (x + 1))
+                    (node |> box) :? Core.IUserJump |> not 
+                else true)
+
+            let targetIndex,_,_ = indexedList |> List.item g
+          
+                
+            [index- 1, targetIndex |> string; index , "ujmp"]
         | :? Core.IJumpConditionalNegative as j -> [index, getObjectPosition j.Label |> string; index + 1, "jn"]
         | :? Core.IJump as j -> [index, getObjectPosition j.Label |> string; index + 1, "jmp"]
+        //| :? Core.IDefinedLabel as l ->[]
         | :? Core.IDefinedLabel as l ->
             let pos = indexedList |> List.findIndex(function i,_,_ when i = index -> true | _ -> false)
             if pos < indexedList.Length - 1
@@ -72,7 +94,7 @@ module Indexer =
     let getIndexedList  (stream:Core.IExecutionStreamNode list) =
            let mutable i = 0
            let gg = stream |> List.map (fun x -> 
-               let indexed = getIndexedNode i x
+               let indexed = getIndexedNode i x stream
                let _, length, _ = indexed
                i <- i + length
                indexed
@@ -97,38 +119,6 @@ module Parse =
     
     let log x =
         Core.Logger.Add( "rpnParser", x)
-
-    let getIndexedNode index (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) node =
-        let getLabelPosition label =
-            stream |> List.findIndex(fun x -> x=label)
-
-        match box node with 
-        | :? Core.IVariable as v -> [index, v.Name]
-        | :? Core.ILiteral as l -> [index, string l.Value]
-        | :? Core.ICall as c -> [index, (c.ParamCount |> string); index + 1, c.Address; index + 2, " call"]
-        | :? Core.IUserJump -> [index, "ujmp"]
-        | :? Core.IJumpConditionalNegative as j -> [index, getLabelPosition j.Label |> string; index + 1, " jn"]
-        | :? Core.IJump as j -> [index, getLabelPosition j.Label |> string; index + 1, " jmp"]
-        | :? Core.ILabel as l -> [index, l.Name + ":@+" + (index |> string)]
-        | x -> 
-            match x with
-            | :? Core.IDefinedStreamNode as s ->
-                [index, (nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name]
-            | _ ->
-                [index, "unsupported"]
-        
-    let getIndexedString  (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        let mutable i = 0
-        let gg = stream |> List.collect (fun x -> 
-            let indexed = getIndexedNode i stream nodes x
-            i <- indexed |> List.last |> fst |> (+) 1
-            indexed
-        )
-        gg
-
-    let getLoggableIndexed (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        getIndexedString stream nodes 
-        |> List.map (fun x -> {pos = fst x; value = snd x})
 
 
     let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
@@ -217,10 +207,14 @@ module Parse =
 
                     match grammarNode with
                     | :? Core.IDefinedOperator as definedOperator ->
-                        while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
-                            put stacks.Head.Value.Head.executionNode
-                            stacks.Head.Value <- stacks.Head.Value.Tail
-                        stacks.Head.Value <- {grammarNode = definedOperator; executionNode = node} :: stacks.Head.Value
+                        if not stacks.IsEmpty
+                        then
+                            while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
+                                put stacks.Head.Value.Head.executionNode
+                                stacks.Head.Value <- stacks.Head.Value.Tail
+                            stacks.Head.Value <- {grammarNode = definedOperator; executionNode = node} :: stacks.Head.Value
+                        else
+                            stacks <- [ref [{grammarNode = definedOperator; executionNode = node}]]
 
                     | _ ->
                         failwith("not implemented")

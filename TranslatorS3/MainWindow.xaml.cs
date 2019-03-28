@@ -56,19 +56,10 @@ namespace TranslatorS3
         {
             InitializeComponent();
 
-
-
-            //EditorBox.ScriptChanged += EditorBox_ScriptChanged;
-            //EditorBox.ParsedTokensGetter = () => ParsedTokens;
-            //EditorBox.ErrorsGetter = () => GetErrors();
-            //EditorBox.ControlTerminalsGetter = () => Grammar.Nodes.Terminals.Where(n => n.IsControl);
-            //EditorBox.TabIndentGetter = () => Configuration.General.TabIndent;
-
             logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
             logWindow.Closing += LogWindow_Closing;
 
             timer = new Timer() { AutoReset = false };
-            //timer.Elapsed += Timer_Elapsed;
         }
 
 
@@ -267,7 +258,7 @@ namespace TranslatorS3
             SemanticParserResult = ParserManager.SemanticParser.Parse();
 
 
-            if (SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any())
+            if ((SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any()) && (SemanticParserResult.Errors is null || !SemanticParserResult.Errors.Any()))
             {
                 ParserManager.RpnParser.ParsedTokens = ParsedTokens;
                 ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
@@ -305,6 +296,7 @@ namespace TranslatorS3
             document.ApplyHighlight(syntaxErrors, new[] { Syntax }, Brushes.OrangeRed);
 
             document.ApplyHighlight(lexicalErrors, new[] { Lexical }, Brushes.Violet);
+
 
             ErrorPanel.ReplaceErrors(document, errors);
 

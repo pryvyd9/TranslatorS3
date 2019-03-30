@@ -2,8 +2,156 @@
 using System.Collections.Generic;
 using System.Linq;
 
+namespace Core.Optimize
+{
+    public interface INode
+    {
+        int Id { get; }
+    }
+
+    public enum EntityType
+    {
+        Label,
+        Variable,
+    }
+
+    public enum TTL
+    {
+        Short,
+        Long,
+    }
+
+    public enum DataType
+    {
+        Int,
+        String,
+        Label,
+    }
+
+    public interface IDeclare : INode
+    {
+        string Name { get; }
+
+        EntityType EntityType { get; }
+
+        TTL TTL { get; }
+
+        DataType DataType { get; }
+    }
+
+    public interface ILiteral : INode
+    {
+        object Value { get; }
+
+        DataType DataType { get; }
+    }
+
+    public interface IReference : INode
+    {
+        string Name { get; }
+
+        EntityType EntityType { get; }
+
+        DataType DataType { get; }
+
+        // Declaration Id
+        int Address { get; }
+    }
+
+    public enum CallType
+    {
+        Operator,
+        Function
+    }
+
+    public interface ICall : INode
+    {
+        string Name { get; }
+
+        CallType CallType { get; }
+
+        int ArgumentNumber { get; }
+    }
+
+    public enum JumpType
+    {
+        Unconditional,
+        Positive,
+        Negative,
+    }
+
+    public interface IJump : INode
+    {
+        JumpType JumpType { get; }
+    }
+}
+
 namespace Core
 {
+
+    //public interface ITable
+    //{
+    //    IList<IScope> Scopes { get; }
+    //    IList<IRegisterNode> Registers { get; }
+    //    IList<IReferenceNode> References { get; }
+    //    IList<INode> Nodes { get; }
+    //}
+
+    //public interface IScope
+    //{
+    //    int ParentScope { get; }
+    //    IList<int> ChildrenScopes { get; }
+    //    IList<int> Registers { get; }
+    //}
+
+    //public interface INode
+    //{
+    //    int Scope { get; }
+    //}
+
+    //public interface IRegisterNode : INode
+    //{
+
+    //}
+
+    //public interface IRegisterValue : IRegisterNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public interface IRegisterLabel : IRegisterNode
+    //{
+    //    string Name { get; }
+    //}
+
+
+    //public interface IReferenceNode : INode
+    //{
+
+    //}
+
+    //public interface IReferenceValue : IReferenceNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public interface IReferenceLabel : IReferenceNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public enum JumpCondition
+    //{
+    //    None,
+    //    Positive,
+    //    Negative
+    //}
+
+    //public interface IJump : INode
+    //{
+    //    JumpCondition Condition { get; }
+    //}
+
     public enum StreamControlNodeType
     {
         None,
@@ -15,6 +163,29 @@ namespace Core
         Streamer,
         Statement,
     }
+
+
+    public delegate void ExecutionStartedEventHandler();
+    public delegate void ExecutionEndedEventHandler();
+
+    public interface IExecutor
+    {
+        IEnumerable<IExecutionStreamNode> ExecutionNodes { set; }
+        IEnumerable<INode> GrammarNodes { set; }
+        IEnumerable<IVariable> VisibleVariables { get; }
+
+        void Input(object data);
+
+        event ExecutionStartedEventHandler Started;
+        event ExecutionEndedEventHandler Ended;
+
+        int[] BreakPositions { set; }
+
+        void StepOver();
+        void Run();
+        void Abort();
+    }
+
 
     public interface IExecutionStreamNode
     {
@@ -95,14 +266,14 @@ namespace Core
 
     public interface IJumpConditional : IJump
     {
-        
+
     }
 
     public interface IJumpConditionalNegative : IJumpConditional
     {
 
     }
-   
+
     public interface ICall : IExecutionStreamNode
     {
         string Address { get; }

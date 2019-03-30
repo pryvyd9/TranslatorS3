@@ -130,6 +130,21 @@ namespace SemanticParser
             return TryFindLabelDeclaration(name, scope.ParentScope, out foundLabel);
         }
 
+        private bool IsLastBreaker(IEnumerable<IEnumerable<IExecutionStreamNode>> streams, int[] breakers)
+        {
+            var last = streams.Last().Last();
+
+            if (last is IStatement st)
+            {
+                return IsLastBreaker(st.Streams, breakers);
+            }
+            else
+            {
+                return breakers.Contains(((IDefinedStreamNode)last).GrammarNodeId);
+                //return last.Type == StreamControlNodeType.Breaker;
+            }
+        }
+
         //private bool TryFindLabelDeclaration(string name, IScope scope, out ILabel foundLabel)
         //{
         //    foundLabel = scope.Labels.FirstOrDefault(n => n.Name == name);
@@ -242,7 +257,8 @@ namespace SemanticParser
 
                     var streams = new List<IEnumerable<IExecutionStreamNode>>();
 
-                    bool Break() => streams.Last().Last().Type == StreamControlNodeType.Breaker
+                    //bool Break() => streams.Last().Last().Type == StreamControlNodeType.Breaker
+                    bool Break() => IsLastBreaker(streams, statements[statement.NodeId].breakers)
                                 || ((IDefinedStatement) node).IsStreamMaxCountSet
                                 && ((IDefinedStatement) node).StreamMaxCount <= streams.Count;
                     do

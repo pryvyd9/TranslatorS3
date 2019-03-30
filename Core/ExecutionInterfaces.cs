@@ -2,89 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Core.Optimize
-{
-    public interface INode
-    {
-        int Id { get; }
-    }
 
-    public enum EntityType
-    {
-        Label,
-        Variable,
-    }
-
-    public enum TTL
-    {
-        Short,
-        Long,
-    }
-
-    public enum DataType
-    {
-        Int,
-        String,
-        Label,
-    }
-
-    public interface IDeclare : INode
-    {
-        string Name { get; }
-
-        EntityType EntityType { get; }
-
-        TTL TTL { get; }
-
-        DataType DataType { get; }
-    }
-
-    public interface ILiteral : INode
-    {
-        object Value { get; }
-
-        DataType DataType { get; }
-    }
-
-    public interface IReference : INode
-    {
-        string Name { get; }
-
-        EntityType EntityType { get; }
-
-        DataType DataType { get; }
-
-        // Declaration Id
-        int Address { get; }
-    }
-
-    public enum CallType
-    {
-        Operator,
-        Function
-    }
-
-    public interface ICall : INode
-    {
-        string Name { get; }
-
-        CallType CallType { get; }
-
-        int ArgumentNumber { get; }
-    }
-
-    public enum JumpType
-    {
-        Unconditional,
-        Positive,
-        Negative,
-    }
-
-    public interface IJump : INode
-    {
-        JumpType JumpType { get; }
-    }
-}
 
 namespace Core
 {
@@ -167,17 +85,31 @@ namespace Core
 
     public delegate void ExecutionStartedEventHandler();
     public delegate void ExecutionEndedEventHandler();
+    public delegate void ExecutionInputEventHandler(Action<object> input);
+
+    public enum State
+    {
+        Idle,
+        Paused,
+        Running,
+        Inputting,
+    }
 
     public interface IExecutor
     {
-        IEnumerable<IExecutionStreamNode> ExecutionNodes { set; }
+        IEnumerable<Optimize.INode> ExecutionNodes { set; }
         IEnumerable<INode> GrammarNodes { set; }
         IEnumerable<IVariable> VisibleVariables { get; }
 
-        void Input(object data);
+        State State { get; }
+
+        //void Input(object data);
+
+        Action<object> Output { set; }
 
         event ExecutionStartedEventHandler Started;
         event ExecutionEndedEventHandler Ended;
+        event ExecutionInputEventHandler Input;
 
         int[] BreakPositions { set; }
 

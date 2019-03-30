@@ -127,6 +127,10 @@
       <Project>{ccc58e70-2e48-4d5d-8c0e-25b76c015730}</Project>
       <Name>ConfigView</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ConsoleWindow\ConsoleWindow.csproj">
+      <Project>{50b947f3-cb2b-46de-877a-a4924bdd5ae2}</Project>
+      <Name>ConsoleWindow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Core\Core.csproj">
       <Project>{dd1e2d8f-60dd-4854-bce2-6e9db5c3df2f}</Project>
       <Name>Core</Name>
@@ -134,6 +138,10 @@
     <ProjectReference Include="..\ErrorPanel\ErrorPanel.csproj">
       <Project>{ceef88d4-c7e9-449a-8e81-1822ffe163db}</Project>
       <Name>ErrorPanel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Executor\Executor.csproj">
+      <Project>{f6947def-dc84-4bcd-9dab-0fe601c20805}</Project>
+      <Name>Executor</Name>
     </ProjectReference>
     <ProjectReference Include="..\GrammarParser\GrammarParser.csproj">
       <Project>{e3447cf4-b75c-4445-8cf5-e10d18945291}</Project>
@@ -146,10 +154,6 @@
     <ProjectReference Include="..\PredescenceTableParser\PredescenceTableParser.csproj">
       <Project>{abdb7b64-bb97-41dc-9bb1-ff5c0fd8b0c6}</Project>
       <Name>PredescenceTableParser</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SyntaxPredescenceTableParser\SyntaxPredescenceTableParser.fsproj">
-      <Project>{73a695fe-3b52-4af7-8639-58fb700e91fc}</Project>
-      <Name>SyntaxPredescenceTableParser</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -21,6 +21,8 @@ using System.Timers;
 using ScriptEditor;
 
 using static ScriptEditor.Tag;
+using CWindow = ConsoleWindow.ConsoleWindow;
+using Executor;
 
 namespace TranslatorS3
 {
@@ -39,6 +41,10 @@ namespace TranslatorS3
         private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
 
+        private IExecutor Executor { get; set; }
+
+
+
         private IDocument document;
 
         private readonly Window logWindow;
@@ -51,6 +57,14 @@ namespace TranslatorS3
 
         private bool isTimerAssigned;
         private IDocument timerAssignedDocument;
+
+        private CWindow consoleWindow;
+
+
+
+
+
+
 
         public MainWindow()
         {
@@ -229,6 +243,12 @@ namespace TranslatorS3
 
             InitializeParsers();
 
+            Executor = ExecutorProxy.Create();
+            Executor.GrammarNodes = Grammar.Nodes;
+            Executor.Started += Executor_Started;
+            Executor.Ended += Executor_Ended;
+            Executor.Input += Executor_Input;
+
             document.Updated += Document_Updated;
 
             ScriptEditor.OpenDocument(document);
@@ -238,6 +258,22 @@ namespace TranslatorS3
             Document_Updated(document);
         }
 
+        private void Executor_Input(Action<object> input)
+        {
+            consoleWindow.Input(input);
+        }
+
+        private void Executor_Ended()
+        {
+            consoleWindow.Close();
+        }
+
+        private void Executor_Started()
+        {
+            consoleWindow = new CWindow();
+            consoleWindow.Show();
+            Executor.Output = consoleWindow.Output;
+        }
 
         private void Update(IDocument document)
         {
@@ -561,5 +597,28 @@ namespace TranslatorS3
             catch { }
         }
 
+        private void StepOver_Click(object sender, RoutedEventArgs e)
+        {
+            if (Executor.State != State.Idle && Executor.State != State.Paused)
+            {
+                return;
+            }
+
+            Executor.ExecutionNodes = RpnParserResult.RpnStream;
+
+            Executor.StepOver();
+        }
+
+        private void Run_Click(object sender, RoutedEventArgs e)
+        {
+            if (Executor.State != State.Idle && Executor.State != State.Paused)
+            {
+                return;
+            }
+
+            Executor.ExecutionNodes = RpnParserResult.RpnStream;
+
+            Executor.Run();
+        }
     }
 }

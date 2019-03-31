@@ -40,6 +40,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorPanel", "ErrorPanel\Er
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RpnParser", "PolizParser\RpnParser.fsproj", "{0326C908-3142-4F22-845E-785466DA6AB8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Executor", "Executor\Executor.csproj", "{F6947DEF-DC84-4BCD-9DAB-0FE601C20805}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleWindow", "ConsoleWindow\ConsoleWindow.csproj", "{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +114,14 @@ Global
 		{0326C908-3142-4F22-845E-785466DA6AB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0326C908-3142-4F22-845E-785466DA6AB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6947DEF-DC84-4BCD-9DAB-0FE601C20805}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6947DEF-DC84-4BCD-9DAB-0FE601C20805}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6947DEF-DC84-4BCD-9DAB-0FE601C20805}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6947DEF-DC84-4BCD-9DAB-0FE601C20805}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

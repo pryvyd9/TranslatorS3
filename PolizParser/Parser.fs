@@ -1,6 +1,6 @@
 ﻿namespace RpnParser
 open StatementRuleParser
-
+open System.Collections.Generic
 
 [<AutoOpen>]
 module Types =
@@ -118,8 +118,11 @@ module Indexer =
 module Parse = 
     
     let log x =
-        Core.Logger.Add( "rpnParser", x)
+        ()
+        //Core.Logger.Add( "rpnParser", x)
 
+    let ( ?<- ) object name value =
+        object.GetType().GetProperty(name).SetValue(object, value)
 
     let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
         stream |> List.map(function 
@@ -168,7 +171,6 @@ module Parse =
                     rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
                 }
 
-                i <- i + 1
 
                 match box node with
                 | :? Core.IVariable | :? Core.ILiteral -> put node
@@ -205,6 +207,17 @@ module Parse =
                 | :? Core.IOperator as operator ->
                     let grammarNode = nodes |> Seq.find(fun x -> x.Id = operator.GrammarNodeId) 
 
+                    if i > 0
+                    then
+                        let prev = stream |> Seq.item (i - 1)
+                        match prev with
+                        | :? Core.IVariable | :? Core.ILiteral ->
+                            operator ? OperandCount <- 2
+                        | _ -> 
+                            operator ? OperandCount <- 1
+                    else
+                        operator ? OperandCount <- 1
+
                     match grammarNode with
                     | :? Core.IDefinedOperator as definedOperator ->
                         if not stacks.IsEmpty
@@ -226,6 +239,8 @@ module Parse =
                 | :? Core.IDefinedLabel -> put node
                 | _ ->
                     failwith("")
+
+                i <- i + 1
 
             // Copy all stacks remains to stream.
             for stack in stacks do 
@@ -337,6 +352,209 @@ module Parse =
 
         processScope rootScope 
 
+module Optimize =
+    open Core.Optimize
+
+    type Reference = 
+        {id:int; name:string; entityType:EntityType; dataType:DataType;mutable address: int}
+        interface IReference with
+            member this.Name = this.name
+            member this.EntityType = this.entityType
+            member this.DataType = this.dataType
+            member this.Address = this.address
+            member this.Id = this.id
+
+    // # number of arguments
+    // & index in stream
+    // @ global name (namespace.namespace...memberName)
+    // : local name (label names)
+    let getString node =
+        match box node with
+        | :? IDeclare as d ->
+            "decl:" + d.Name
+        | :? ILiteral as l ->
+            l.Value |> string
+        | :? IReference as r ->
+            "&" + (r.Address |> string) + ":" + r.Name
+        | :? ICall as c ->
+            match c.CallType with
+            | CallType.Function ->
+                "call@" + c.Name + "#" + (c.ArgumentNumber |> string)
+            | CallType.Operator ->
+                c.Name + "#" + (c.ArgumentNumber |> string)
+            | _ -> failwith("Undefined CallType")
+        | :? IJump as j ->
+            match j.JumpType with
+            | JumpType.Unconditional -> "jmp"
+            | JumpType.Negative -> "jn"
+            | JumpType.Positive -> "jp"
+            | _ -> failwith("Undefined JumpType")
+        | _ ->
+            "undefined"
+        
+
+    let optimize (rootScope:Core.IScope) (nodes:Core.INode seq) =
+        let rpnStream = rootScope.GetRpnConsistentStream()
+
+        let mutable i = 0
+        // original stream index
+        let mutable oi = 0
+        let mutable currentScope = rootScope
+
+        // Origin, otimizedStream index
+        let declarations = Dictionary<Core.IExecutionStreamNode,int>()
+
+        // Origin, optimizedStream index
+        let mutable references:(Core.IExecutionStreamNode*int) list = []
+
+        let mutable optimizedStream = []
+        
+
+
+        let inc() = i <- i + 1
+        let dec() = i <- i - 1
+
+        let put (node:INode) =
+            optimizedStream <- optimizedStream @ [node]
+
+        let getIndex = function _,i -> i 
+
+        let declare name entityType dataType ttl origin =
+            let i = i
+            let node = {
+                new IDeclare with
+                    member __.Id = i
+                    member __.Name = name
+                    member __.EntityType = entityType
+                    member __.DataType = dataType
+                    member __.TTL = ttl
+            } 
+
+            declarations.Add (origin, i)
+           
+            // Modify references
+            for reference in references |> List.filter(fst >> (=) (origin)) do
+                let k = optimizedStream.[getIndex reference]
+                (k :?> Reference).address <- i
+
+
+            // Remove modified references
+            references <- references  |> List.filter(fst >> (<>) (origin))
+
+            // Label declarations are omited.
+            if entityType = EntityType.Label
+            then
+                dec()
+            else
+                put node
+
+        let literal dataType value =
+            let i = i
+            let node = {
+                new ILiteral with
+                    member __.Id = i
+                    member __.Value = value
+                    member __.DataType = dataType
+            } 
+
+            put node
+
+        let reference name entityType dataType origin =
+            let address =
+                match declarations.TryGetValue (origin) with
+                | true, x -> x
+                | _ -> references <- (origin,i) :: references; 0
+
+            let node = {
+                id=i;
+                name = name; 
+                entityType = entityType;
+                dataType = dataType;
+                address = address;
+            } 
+            
+            put node
+
+        let call name callType argumentNumber =
+            let i = i
+            let node = {
+                new ICall with
+                    member __.Id = i
+                    member __.CallType = callType
+                    member __.Name = name
+                    member __.ArgumentNumber = argumentNumber
+            } 
+            put node
+            
+        let jump jumpType =
+            let i = i
+            let node = {
+                new IJump with
+                    member __.Id = i
+                    member __.JumpType = jumpType
+            } 
+            put node
+
+        for node in rpnStream do
+            
+            currentScope <- node.Scope
+
+            match node with
+            | :? Core.IVariable as v ->
+                if declarations.ContainsKey(v)
+                then
+                    reference v.Name EntityType.Variable DataType.Int node
+                else
+                    declare v.Name EntityType.Variable DataType.Int TTL.Short node
+
+            | :? Core.ILiteral as l ->
+                literal DataType.Int l.Value
+
+            | :? Core.IOperator as o ->
+                call (nodes |> Seq.find(fun x -> x.Id = o.GrammarNodeId)).Name CallType.Operator o.OperandCount
+
+            | :? Core.ICall as c ->
+                call c.Address CallType.Function c.ParamCount
+
+            | :? Core.IJumpConditionalNegative as jn-> 
+                reference jn.Label.Name EntityType.Label DataType.Label jn.Label
+                inc()
+                jump JumpType.Negative
+
+            | :? Core.IJumpConditional as jc ->
+                reference jc.Label.Name EntityType.Label DataType.Label jc.Label
+                inc()
+                jump JumpType.Positive
+
+            | :? Core.IJump as jmp ->
+                reference jmp.Label.Name EntityType.Label DataType.Label jmp.Label
+                inc()
+                jump JumpType.Unconditional
+            | :? Core.IDefinedLabel as l ->
+                if rpnStream |> Seq.length > oi + 1 
+                    && ((rpnStream |> Seq.item (oi + 1)) :? Core.IJump)
+                then
+                    //reference l.Name EntityType.Label DataType.Label node
+                    dec()
+                else
+                    declare l.Name EntityType.Label DataType.Label TTL.Short node
+
+            | :? Core.ILabel as l ->
+                declare l.Name EntityType.Label DataType.Label TTL.Short node
+            //| :? Core.ILabel as l ->
+            //    if rpnStream |> Seq.length > oi + 1 
+            //        && ((rpnStream |> Seq.item (oi + 1)) :? Core.IJump)
+            //    then
+            //        reference l.Name EntityType.Label DataType.Label node
+            //    else
+            //        declare l.Name EntityType.Label DataType.Label TTL.Short node
+
+            | _ ->
+                ()
+            inc()
+            oi <- oi + 1
+        optimizedStream
+
         //getString (rootScope.GetRpnConsistentStream() |> List.ofSeq) nodes
 
 
@@ -349,37 +567,48 @@ type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
 
     member this.Parse() =
         
-        Core.Logger.Clear("rpnParser");
+        //Core.Logger.Clear("rpnParser");
         Core.Logger.Clear("rpnParserIndexed");
 
-        Parse.log {
-            stream = Parse.getString (this.RootScope.GetConsistentStream() |> List.ofSeq) grammarNodes; 
-            stack = ""; 
-            rpnStream = ""; 
-        }
+        //Parse.log {
+        //    stream = Parse.getString (this.RootScope.GetConsistentStream() |> List.ofSeq) grammarNodes; 
+        //    stack = ""; 
+        //    rpnStream = ""; 
+        //}
 
         try
             Parse.parse this.RootScope grammarNodes statementRules
         with x -> 
             Core.Logger.Add("system.RpmParser", x.Message)
 
-        Indexer.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
-        //Parse.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
-        |> List.iter (fun x -> Core.Logger.Add("rpnParserIndexed", x))
+        let optimized = Optimize.optimize this.RootScope grammarNodes
+        
+        let log stream =
+            let mutable i = 0
+            for node in stream do
+                let name = Optimize.getString node
+                //printfn "%i\t%s" i name
+                Core.Logger.Add("rpnParserIndexed", {pos=i;value=name})
+                i <- i + 1
 
-        let str = Parse.getString (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        log optimized
 
-        printfn "%A" str
-        Parse.log {
-            stream = ""; 
-            stack = ""; 
-            rpnStream = str; 
-        }
+        //Indexer.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        ////Parse.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
+        //|> List.iter (fun x -> Core.Logger.Add("rpnParserIndexed", x))
 
+        //let str = Parse.getString (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
 
+        //printfn "%A" str
+        //Parse.log {
+        //    stream = ""; 
+        //    stack = ""; 
+        //    rpnStream = str; 
+        //}
+            
         {
             new Core.IRpnParserResult with
-            member __.RpnStream = this.RootScope.GetRpnConsistentStream()
+            member __.RpnStream = optimized |> Array.ofList
             member __.Errors = Seq.empty
         }
 

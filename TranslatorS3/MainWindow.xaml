@@ -26,6 +26,8 @@
             </MenuItem>-->
             <MenuItem Header="Config" Click="ShowConfiguration_Click"/>
             <MenuItem Header="Logger" Click="ShowLogger_Click"/>
+            <MenuItem Header="StepOver" Click="StepOver_Click"/>
+            <MenuItem Header="Run" Click="Run_Click"/>
         </Menu>
 
         <scriptEditor:CoolEditor Name="ScriptEditor" Grid.Row="1"/>

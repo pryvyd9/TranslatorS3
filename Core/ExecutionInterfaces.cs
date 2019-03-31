@@ -1,9 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+
 
 namespace Core
 {
+
+    //public interface ITable
+    //{
+    //    IList<IScope> Scopes { get; }
+    //    IList<IRegisterNode> Registers { get; }
+    //    IList<IReferenceNode> References { get; }
+    //    IList<INode> Nodes { get; }
+    //}
+
+    //public interface IScope
+    //{
+    //    int ParentScope { get; }
+    //    IList<int> ChildrenScopes { get; }
+    //    IList<int> Registers { get; }
+    //}
+
+    //public interface INode
+    //{
+    //    int Scope { get; }
+    //}
+
+    //public interface IRegisterNode : INode
+    //{
+
+    //}
+
+    //public interface IRegisterValue : IRegisterNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public interface IRegisterLabel : IRegisterNode
+    //{
+    //    string Name { get; }
+    //}
+
+
+    //public interface IReferenceNode : INode
+    //{
+
+    //}
+
+    //public interface IReferenceValue : IReferenceNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public interface IReferenceLabel : IReferenceNode
+    //{
+    //    string Name { get; }
+    //}
+
+    //public enum JumpCondition
+    //{
+    //    None,
+    //    Positive,
+    //    Negative
+    //}
+
+    //public interface IJump : INode
+    //{
+    //    JumpCondition Condition { get; }
+    //}
+
     public enum StreamControlNodeType
     {
         None,
@@ -15,6 +81,43 @@ namespace Core
         Streamer,
         Statement,
     }
+
+
+    public delegate void ExecutionStartedEventHandler();
+    public delegate void ExecutionEndedEventHandler();
+    public delegate void ExecutionInputEventHandler(Action<object> input);
+
+    public enum State
+    {
+        Idle,
+        Paused,
+        Running,
+        Inputting,
+    }
+
+    public interface IExecutor
+    {
+        IEnumerable<Optimize.INode> ExecutionNodes { set; }
+        IEnumerable<INode> GrammarNodes { set; }
+        //IEnumerable<Optimize.IValueHolder> VisibleVariables { get; }
+
+        State State { get; }
+
+        //void Input(object data);
+
+        Action<object> Output { set; }
+
+        event ExecutionStartedEventHandler Started;
+        event ExecutionEndedEventHandler Ended;
+        event ExecutionInputEventHandler Input;
+
+        int[] BreakPositions { set; }
+
+        Task StepOver();
+        Task Run();
+        Task Abort();
+    }
+
 
     public interface IExecutionStreamNode
     {
@@ -95,14 +198,14 @@ namespace Core
 
     public interface IJumpConditional : IJump
     {
-        
+
     }
 
     public interface IJumpConditionalNegative : IJumpConditional
     {
 
     }
-   
+
     public interface ICall : IExecutionStreamNode
     {
         string Address { get; }

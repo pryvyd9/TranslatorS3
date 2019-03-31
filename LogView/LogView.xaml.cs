@@ -27,26 +27,32 @@ namespace LogView
         {
             InitializeComponent();
 
-            List<object> source = new List<object>();
+            Fill();
 
-            //dt.ItemsSource = source;
-
-            //source.Add(new { Value = "here" });
-
-
-            Logger.LoggerUpdated += Logger_LoggerUpdated;
+            Logger.LoggerUpdated += Add;
         }
 
-        private void Logger_LoggerUpdated(string key, object newValue)
+        private void Fill()
         {
-            TabItem tabItem = tabControl.Items.Cast<TabItem>().FirstOrDefault(n => (string)n.Header == key);
+            foreach (var tab in Logger.Log)
+            {
+                foreach (var record in tab.Value)
+                {
+                    Add(tab.Key, record);
+                }
+            }
+        }
+
+        private void Add(string header, object record)
+        {
+            TabItem tabItem = tabControl.Items.Cast<TabItem>().FirstOrDefault(n => (string)n.Header == header);
             //DataGrid dataGrid;
 
             if (tabItem == null)
             {
-                DataGrid dataGrid = new DataGrid() { ItemsSource = Logger.Log[key] };
+                DataGrid dataGrid = new DataGrid() { ItemsSource = Logger.Log[header] };
 
-                tabItem = new TabItem() { Header = key, Content = dataGrid };
+                tabItem = new TabItem() { Header = header, Content = dataGrid };
                 tabControl.Items.Add(tabItem);
             }
             //else

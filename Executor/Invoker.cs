@@ -101,7 +101,7 @@ namespace Executor
                     }
 
                     executor.TrySetValue(left, value);
-                    stack.Push(left);
+                    //stack.Push(left);
                 },
 
 
@@ -168,7 +168,7 @@ namespace Executor
 
                ["=="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] == (int)args[1];
+                   object func(object[] args) => (int)args[0] == (int)args[1] ? 1 : 0;
 
                    var result = await Execute(stack, executor, argumentCount, func);
 
@@ -176,7 +176,7 @@ namespace Executor
                },
                ["<="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] <= (int)args[1];
+                   object func(object[] args) => (int)args[0] <= (int)args[1] ? 1 : 0;
 
                    var result = await Execute(stack, executor, argumentCount, func);
 
@@ -184,7 +184,7 @@ namespace Executor
                },
                [">="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] >= (int)args[1];
+                   object func(object[] args) => (int)args[0] >= (int)args[1] ? 1 : 0;
 
                    var result = await Execute(stack, executor, argumentCount, func);
 
@@ -192,7 +192,7 @@ namespace Executor
                },
                ["<"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => ((int)args[0] < (int)args[1]) ? 1 : 0;
+                   object func(object[] args) => (int)args[0] < (int)args[1] ? 1 : 0;
 
                    var result = await Execute(stack, executor, argumentCount, func);
 
@@ -200,7 +200,7 @@ namespace Executor
                },
                [">"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] > (int)args[1];
+                   object func(object[] args) => (int)args[0] > (int)args[1] ? 1 : 0;
 
                    var result = await Execute(stack, executor, argumentCount, func);
 
@@ -260,7 +260,7 @@ namespace Executor
                             {
                                 if (executor.TrySetValue(v, s))
                                 {
-                                    stack.Push(param);
+                                    //stack.Push(param);
                                     return;
                                 }
                             }
@@ -280,32 +280,42 @@ namespace Executor
         public static async Task Invoke(O.ICall call, Executor executor)
         {
             var stack = executor.stack;
-
-            if (call.CallType == O.CallType.Function)
+            try
             {
-                if (!functions.ContainsKey(call.Name))
+
+           
+                if (call.CallType == O.CallType.Function)
                 {
-                    executor.Log($"Function '{call.Name}' was not found.");
-                    throw new Exception("Function was not found.");
+                    if (!functions.ContainsKey(call.Name))
+                    {
+                        executor.Log($"Function '{call.Name}' was not found.");
+                        throw new Exception("Function was not found.");
+                    }
+
+                    executor.Log($"call@{call.Name}#{call.ArgumentNumber}");
+
+                    var func = functions[call.Name];
+                    await func(stack, executor, call.ArgumentNumber);
                 }
+                else
+                {
+                    if (!operations.ContainsKey(call.Name))
+                    {
+                        executor.Log($"Operation '{call.Name}' was not found.");
+                        throw new Exception("Operation was not found.");
+                    }
 
-                executor.Log($"call@{call.Name}#{call.ArgumentNumber}");
+                    executor.Log($"{call.Name}#{call.ArgumentNumber}");
 
-                var func = functions[call.Name];
-                await func(stack, executor, call.ArgumentNumber);
+                    var func = operations[call.Name];
+                    await func(stack, executor, call.ArgumentNumber);
+                }
             }
-            else
+            catch (Exception e)
             {
-                if (!operations.ContainsKey(call.Name))
-                {
-                    executor.Log($"Operation '{call.Name}' was not found.");
-                    throw new Exception("Operation was not found.");
-                }
-
-                executor.Log($"{call.Name}#{call.ArgumentNumber}");
-
-                var func = operations[call.Name];
-                await func(stack, executor, call.ArgumentNumber);
+                executor.Log(e.Message);
+                _ = executor.Abort();
+                throw;
             }
         }
     }

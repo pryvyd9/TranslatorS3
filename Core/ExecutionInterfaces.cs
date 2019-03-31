@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading.Tasks;
 
 
 namespace Core
@@ -113,9 +113,9 @@ namespace Core
 
         int[] BreakPositions { set; }
 
-        void StepOver();
-        void Run();
-        void Abort();
+        Task StepOver();
+        Task Run();
+        Task Abort();
     }
 
 

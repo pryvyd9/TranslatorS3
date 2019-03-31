@@ -42,31 +42,30 @@ namespace Core.Optimize
         Negative,
     }
 
-    public interface IDeclare : INode
+    public interface IValueHolder : INode
+    {
+        DataType DataType { get; }
+    }
+
+    public interface IDeclare : IValueHolder
     {
         string Name { get; }
 
         EntityType EntityType { get; }
 
         TTL TTL { get; }
-
-        DataType DataType { get; }
     }
 
-    public interface ILiteral : INode
+    public interface ILiteral : IValueHolder
     {
         object Value { get; }
-
-        DataType DataType { get; }
     }
 
-    public interface IReference : INode
+    public interface IReference : IValueHolder
     {
         string Name { get; }
 
         EntityType EntityType { get; }
-
-        DataType DataType { get; }
 
         // Declaration Id
         int Address { get; }

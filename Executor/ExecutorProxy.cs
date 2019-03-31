@@ -47,7 +47,7 @@ namespace Executor
                     break;
                 case "Run":
                 case "StepOver":
-                    if (origin.State != State.Idle)
+                    if (origin.State != State.Idle && origin.State != State.Paused)
                     {
                         throw new Exception("Executor must be idle.");
                     }
@@ -87,7 +87,7 @@ namespace Executor
 
         public override bool TrySetMember(SetMemberBinder binder, object value)
         {
-            if (origin.State != State.Idle)
+            if (origin.State != State.Idle && origin.State != State.Paused)
             {
                 throw new Exception("Executor is busy.");
             }

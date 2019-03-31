@@ -270,7 +270,11 @@ namespace TranslatorS3
 
         private void Executor_Started()
         {
-            consoleWindow = new CWindow();
+            consoleWindow = new CWindow
+            {
+                Height = 480,
+                Width = 640,
+            };
             consoleWindow.Show();
             Executor.Output = consoleWindow.Output;
         }
@@ -597,11 +601,16 @@ namespace TranslatorS3
             catch { }
         }
 
-        private void StepOver_Click(object sender, RoutedEventArgs e)
+        private async void StepOver_Click(object sender, RoutedEventArgs e)
         {
             if (Executor.State != State.Idle && Executor.State != State.Paused)
             {
                 return;
+            }
+
+            while (RpnParserResult is null)
+            {
+                await Task.Delay(10);
             }
 
             Executor.ExecutionNodes = RpnParserResult.RpnStream;
@@ -609,11 +618,17 @@ namespace TranslatorS3
             Executor.StepOver();
         }
 
-        private void Run_Click(object sender, RoutedEventArgs e)
+        private async void Run_Click(object sender, RoutedEventArgs e)
         {
             if (Executor.State != State.Idle && Executor.State != State.Paused)
             {
                 return;
+            }
+
+
+            while (RpnParserResult is null)
+            {
+                await Task.Delay(10);
             }
 
             Executor.ExecutionNodes = RpnParserResult.RpnStream;

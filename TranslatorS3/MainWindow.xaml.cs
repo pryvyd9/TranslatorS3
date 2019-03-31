@@ -384,10 +384,16 @@ namespace TranslatorS3
                     SystemCommands.RestoreWindow(logWindow);
                 }
 
+                if (!logWindow.IsActive)
+                {
+                    logWindow.Activate();
+                }
+
                 return;
             }
 
             logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
+            logWindow.Closed += (s, _) => logWindow = null;
 
             logWindow.Show();
         }

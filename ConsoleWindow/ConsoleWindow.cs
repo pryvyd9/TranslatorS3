@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Windows.Media;
+using System.Windows.Input;
 
 namespace ConsoleWindow
 {
@@ -21,6 +22,9 @@ namespace ConsoleWindow
 
         private readonly ObservableCollection<object> items;
 
+
+
+
         public ConsoleWindow()
         {
             items = new ObservableCollection<object>();
@@ -32,6 +36,7 @@ namespace ConsoleWindow
             present = new TextBox
             {
                 Height = 24,
+                IsEnabled = false,
             };
 
             past.SetValue(Grid.RowProperty, 0);
@@ -53,6 +58,12 @@ namespace ConsoleWindow
             Content = grid;
         }
 
+        // Enforce input in present.
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            present.Focus();
+        }
+
         private void Present_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Enter)
@@ -60,6 +71,10 @@ namespace ConsoleWindow
                 if (inputs.Count > 0)
                 {
                     inputs.Dequeue()?.Invoke(present.Text);
+                    if (inputs.Count == 0)
+                    {
+                        present.IsEnabled = false;
+                    }
                 }
 
                 Output(present.Text);
@@ -72,6 +87,8 @@ namespace ConsoleWindow
 
         public void Input(Action<object> input)
         {
+            present.IsEnabled = true;
+
             inputs.Enqueue(input);
         }
 
@@ -79,9 +96,7 @@ namespace ConsoleWindow
         {
             items.Add(value);
 
-            var scroll = GetChildOfType<ScrollViewer>(past);
-
-            scroll.PageDown();
+            GetChildOfType<ScrollViewer>(past).PageDown();
         }
 
 
@@ -95,9 +110,11 @@ namespace ConsoleWindow
                 var child = VisualTreeHelper.GetChild(depObj, i);
 
                 var result = (child as T) ?? GetChildOfType<T>(child);
+
                 if (result != null)
                     return result;
             }
+
             return null;
         }
     }

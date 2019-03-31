@@ -264,8 +264,10 @@ namespace Executor
                                     return;
                                 }
                             }
-                            catch (Exception)
+                            catch
                             {
+                                var targetTypeName = Enum.GetName(typeof(O.DataType), v.DataType);
+                                executor.Log($"Given value '{s}' cannot be converted to target type '{targetTypeName}'.");
                                 throw;
                             }
                             throw new Exception("Value could not be set into variable.");

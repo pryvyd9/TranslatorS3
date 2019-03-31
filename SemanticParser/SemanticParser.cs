@@ -132,6 +132,9 @@ namespace SemanticParser
 
         private bool IsLastBreaker(IEnumerable<IEnumerable<IExecutionStreamNode>> streams, int[] breakers)
         {
+            if (!streams.Any())
+                return false;
+
             var last = streams.Last().Last();
 
             if (last is IStatement st)
@@ -167,6 +170,11 @@ namespace SemanticParser
         //}
         private object GetValueFromParsedToken(IParsedToken token)
         {
+            if (token.Name == "true")
+                return 1;
+            else if (token.Name == "false")
+                return 0;
+
             if (int.TryParse(token.Name, out var value))
             {
                 return value;

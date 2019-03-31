@@ -161,33 +161,17 @@ namespace Executor
 
         internal void Print(O.IValueHolder obj)
         {
-            switch (obj)
-            {
-                case O.IDeclare v:
-                    {
-                        if (TryGetValue(v, out var value))
-                            Output(value);
-                        else
-                            Output("None");
-                    }
-                    break;
-                case O.IReference v:
-                    {
-                        if (TryGetValue(v, out var value))
-                            Output(value);
-                        else
-                            Output("None");
-                    }
-                    break;
-                case O.ILiteral v:
-                    {
-                        Output(v.Value);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            
+            Output(GetString(obj));
+           
+        }
+
+        private string GetString(O.IValueHolder obj)
+        {
+            if (!TryGetValue(obj, out var value))
+                throw new Exception("Unsupported ValueHolder.");
+
+            return value?.ToString() ?? "None";
+          
         }
 
         private void Jump(O.IJump jump)
@@ -227,7 +211,13 @@ namespace Executor
 
         internal void Log(string message)
         {
-            Logger.Add("executor", new { Id = position, Mesage = message });
+            var values = this.stack
+                .OfType<O.IValueHolder>()
+                .Select(n => GetString(n));
+
+            var stack = string.Join("|", values);
+
+            Logger.Add("executor", new { Id = position, Mesage = message, Stack = stack });
         }
 
         public async Task StepOver()

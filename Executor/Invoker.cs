@@ -82,6 +82,17 @@ namespace Executor
             return result;
         }
 
+        private static async Task CreateLiteralAndPush(
+            Stack<O.INode> stack,
+            Executor executor, 
+            int argumentCount, 
+            Func<object[], object> func,
+            O.DataType dataType)
+        {
+            var result = await Execute(stack, executor, argumentCount, func);
+
+            stack.Push(Executor.CreateLiteral(result, dataType, stack.Count));
+        }
 
         private static readonly Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>> operations =
            new Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>>
@@ -129,37 +140,19 @@ namespace Executor
                },
                ["+"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] + (int)args[1];
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] + (int)args[1], O.DataType.Int);
                },
                ["*"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] * (int)args[1];
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] * (int)args[1], O.DataType.Int);
                },
                ["/"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] / (int)args[1];
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] / (int)args[1], O.DataType.Int);
                },
-
-
                ["^"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)Math.Pow((int)args[0], (int)args[1]);
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)Math.Pow((int)args[0], (int)args[1]), O.DataType.Int);
                },
 
                #endregion
@@ -168,68 +161,36 @@ namespace Executor
 
                ["=="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] == (int)args[1] ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] == (int)args[1] ? 1 : 0, O.DataType.Int);
                },
                ["<="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] <= (int)args[1] ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] <= (int)args[1] ? 1 : 0, O.DataType.Int);
                },
                [">="] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] >= (int)args[1] ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] >= (int)args[1] ? 1 : 0, O.DataType.Int);
                },
                ["<"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] < (int)args[1] ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] < (int)args[1] ? 1 : 0, O.DataType.Int);
                },
                [">"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] > (int)args[1] ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] > (int)args[1] ? 1 : 0, O.DataType.Int);
                },
 
                ["and"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] & (int)args[1];
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] & (int)args[1], O.DataType.Int);
                },
                ["or"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] | (int)args[1];
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] | (int)args[1], O.DataType.Int);
                },
                ["not"] = async (stack, executor, argumentCount) =>
                {
-                   object func(object[] args) => (int)args[0] == 0 ? 1 : 0;
-
-                   var result = await Execute(stack, executor, argumentCount, func);
-
-                   stack.Push(Executor.CreateLiteral(result, O.DataType.Int, stack.Count));
+                   await CreateLiteralAndPush(stack, executor, argumentCount, args => (int)args[0] == 0 ? 1 : 0, O.DataType.Int);
                },
                #endregion
            };

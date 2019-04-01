@@ -14,112 +14,8 @@ module Types =
     type Log = {stream:string; stack:string; rpnStream:string;}
     type IndexedLog = {pos:int;value:string;}
 
-
-module Indexer =
-    let getIndexedNode index node stream =
-        match box node with
-        | :? Core.IVariable | :? Core.ILiteral | :? Core.IUserJump  -> index, 1, node
-        | :? Core.ICall -> index, 3, node
-        | :? Core.IJump -> index, 2, node
-        | :? Core.IDefinedLabel as l-> 
-            //match stream 
-            //    |> List.filter((=) node)
-            //    |> List.map(fun x -> stream |> List.findIndex((=) x))
-            //    |> List.tryFind(fun x -> if stream.Length > (x + 1) then (stream |> (List.item (x + 1)) |> box) :? Core.IUserJump |> not else true)
-            //        with
-            //        | Some s -> index, 1, node
-            //        | _ -> index, 0, node
-            index, 1, node
-        | :? Core.ILabel -> index, 0, node // We ignore it as we don't want to see it in the command stream
-        | x -> 
-            match x with
-            | :? Core.IDefinedStreamNode ->
-                index, 1, node
-            | _ ->
-                index, 1, null
-
-    let getStringedNode (nodes:Core.INode seq) (indexedList:'a list) (node:'a) =
-        let index,_,node = node
-        let getObjectPosition item =
-            let index, _, _ = indexedList |> List.find(function _,_,node when box node = box item -> true | _ -> false)
-            index
-
-        match box node with 
-        | :? Core.IVariable as v -> [index, v.Name]
-        | :? Core.ILiteral as l -> [index, string l.Value]
-        | :? Core.ICall as c -> [index, (c.ParamCount |> string); index + 1, c.Address; index + 2, "call"]
-        //| :? Core.IUserJump -> [index, "ujmp"]
-        | :? Core.IUserJump as j-> 
-            //let targetIndex,_,_ = indexedList |> List.find(function _,_,n when box n = box j.Label -> true | _ -> false)
-
-            let h = indexedList 
-                          |> List.filter(function _,_,n when box n = box j.Label -> true | _ -> false)
-                          |> List.map(fun x -> indexedList |> List.findIndex((=) x))
-
-            let g = h |> List.find(fun x -> 
-                if indexedList.Length > (x + 1) 
-                then 
-                    let _,_,node = indexedList |> (List.item (x + 1))
-                    (node |> box) :? Core.IUserJump |> not 
-                else true)
-
-            let targetIndex,_,_ = indexedList |> List.item g
-          
-                
-            [index- 1, targetIndex |> string; index , "ujmp"]
-        | :? Core.IJumpConditionalNegative as j -> [index, getObjectPosition j.Label |> string; index + 1, "jn"]
-        | :? Core.IJump as j -> [index, getObjectPosition j.Label |> string; index + 1, "jmp"]
-        //| :? Core.IDefinedLabel as l ->[]
-        | :? Core.IDefinedLabel as l ->
-            let pos = indexedList |> List.findIndex(function i,_,_ when i = index -> true | _ -> false)
-            if pos < indexedList.Length - 1
-            then
-                let _,_,next = indexedList.[pos + 1]
-                match box next with
-                | :? Core.IUserJump -> []
-                | _ -> [index, l.Name + "+" + (index |> string)]
-            else
-                [index, l.Name + "+" + (index |> string)]
-
-        // We ignore it as we don't want to see it in the command stream 
-        //| :? Core.ILabel as l -> [index, l.Name + ":@+" + (index |> string)]
-        | :? Core.ILabel -> []
-        | x -> 
-            match x with
-            | :? Core.IDefinedStreamNode as s ->
-                [index, (nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name]
-            | _ ->
-                [index, "unsupported"]
-
-    let getIndexedList  (stream:Core.IExecutionStreamNode list) =
-           let mutable i = 0
-           let gg = stream |> List.map (fun x -> 
-               let indexed = getIndexedNode i x stream
-               let _, length, _ = indexed
-               i <- i + length
-               indexed
-           )
-           gg
-
-
-    let getIndexedNodes (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        let indexedNodeList = getIndexedList stream
-        let indexedStream = indexedNodeList |> List.collect(getStringedNode nodes indexedNodeList)
-
-        //let lastIndex, lastLength, _ = indexedNodeList |> List.last
-        //let totalLength = lastIndex + lastLength
-        indexedStream
-
-    
-    let getLoggableIndexed (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        getIndexedNodes stream nodes 
-        |> List.map (fun x -> {pos = fst x; value = snd x})
-
 module Parse = 
     
-    let log x =
-        ()
-        //Core.Logger.Add( "rpnParser", x)
 
     let ( ?<- ) object name value =
         object.GetType().GetProperty(name).SetValue(object, value)
@@ -165,13 +61,7 @@ module Parse =
             let mutable i = 0
 
             for node in stream do
-                log {
-                    stream = getString (stream |> List.ofSeq |> List.skip i) nodes; 
-                    stack = if stacks.Length = 0 then "" else  getString (stacks.Head.Value |> List.map (fun x -> x.executionNode)) nodes; 
-                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
-                }
-
-
+               
                 match box node with
                 | :? Core.IVariable | :? Core.ILiteral -> put node
                 | :? Core.IDelimiter as delimiter ->
@@ -285,19 +175,9 @@ module Parse =
             
            
             let put stream x =
-                log {
-                    stream = stream; 
-                    stack = ""; 
-                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
-                }
                 rpnStream <- rpnStream @ [x :> Core.IExecutionStreamNode]
 
             let putStream x =
-                log {
-                    stream = getString (x |> List.ofSeq) nodes; 
-                    stack = ""; 
-                    rpnStream = getString (rpnStream |> List.ofSeq) nodes; 
-                }
                 rpnStream <- rpnStream @ x
 
             let labelsWithName name = 
@@ -534,28 +414,17 @@ module Optimize =
                 if rpnStream |> Seq.length > oi + 1 
                     && ((rpnStream |> Seq.item (oi + 1)) :? Core.IJump)
                 then
-                    //reference l.Name EntityType.Label DataType.Label node
                     dec()
                 else
                     declare l.Name EntityType.Label DataType.Label TTL.Short node
 
             | :? Core.ILabel as l ->
                 declare l.Name EntityType.Label DataType.Label TTL.Short node
-            //| :? Core.ILabel as l ->
-            //    if rpnStream |> Seq.length > oi + 1 
-            //        && ((rpnStream |> Seq.item (oi + 1)) :? Core.IJump)
-            //    then
-            //        reference l.Name EntityType.Label DataType.Label node
-            //    else
-            //        declare l.Name EntityType.Label DataType.Label TTL.Short node
-
             | _ ->
                 ()
             inc()
             oi <- oi + 1
         optimizedStream
-
-        //getString (rootScope.GetRpnConsistentStream() |> List.ofSeq) nodes
 
 
 type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
@@ -567,14 +436,7 @@ type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
 
     member this.Parse() =
         
-        //Core.Logger.Clear("rpnParser");
         Core.Logger.Clear("rpnParserIndexed");
-
-        //Parse.log {
-        //    stream = Parse.getString (this.RootScope.GetConsistentStream() |> List.ofSeq) grammarNodes; 
-        //    stack = ""; 
-        //    rpnStream = ""; 
-        //}
 
         try
             Parse.parse this.RootScope grammarNodes statementRules
@@ -587,25 +449,11 @@ type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
             let mutable i = 0
             for node in stream do
                 let name = Optimize.getString node
-                //printfn "%i\t%s" i name
                 Core.Logger.Add("rpnParserIndexed", {pos=i;value=name})
                 i <- i + 1
 
         log optimized
 
-        //Indexer.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
-        ////Parse.getLoggableIndexed (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
-        //|> List.iter (fun x -> Core.Logger.Add("rpnParserIndexed", x))
-
-        //let str = Parse.getString (this.RootScope.GetRpnConsistentStream() |> List.ofSeq) grammarNodes
-
-        //printfn "%A" str
-        //Parse.log {
-        //    stream = ""; 
-        //    stack = ""; 
-        //    rpnStream = str; 
-        //}
-            
         {
             new Core.IRpnParserResult with
             member __.RpnStream = optimized |> Array.ofList

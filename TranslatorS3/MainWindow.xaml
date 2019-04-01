@@ -7,10 +7,7 @@
         xmlns:scriptEditor="clr-namespace:ScriptEditor;assembly=ScriptEditor"
         xmlns:errorPanel="clr-namespace:ErrorPanel;assembly=ErrorPanel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800"
-        Loaded="Window_Loaded" Closed="Window_Closed"
-        
-        >
+        Title="MainWindow" Height="450" Width="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="24"/>
@@ -20,22 +17,18 @@
         </Grid.RowDefinitions>
 
         <Menu>
-            <!--<MenuItem Header="File">
-                <MenuItem Header="Open"/>
-                <MenuItem Header="Save"/>
-            </MenuItem>-->
             <MenuItem Header="Config" Click="ShowConfiguration_Click"/>
             <MenuItem Header="Logger" Click="ShowLogger_Click"/>
             <MenuItem Header="StepOver" Click="StepOver_Click"/>
             <MenuItem Header="Run" Click="Run_Click"/>
         </Menu>
 
-        <scriptEditor:CoolEditor Name="ScriptEditor" Grid.Row="1"/>
+        <scriptEditor:CoolEditor Name="scriptEditor" Grid.Row="1"/>
         
 
         <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="3" Background="Black"/>
 
-        <errorPanel:ErrorPanel Name="ErrorPanel" Grid.Row="3"/>
+        <errorPanel:ErrorPanel Name="errorPanel" Grid.Row="3"/>
 
     </Grid>
 </Window>

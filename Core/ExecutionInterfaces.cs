@@ -99,7 +99,7 @@ namespace Core
     {
         IEnumerable<Optimize.INode> ExecutionNodes { set; }
         IEnumerable<INode> GrammarNodes { set; }
-        IEnumerable<IVariable> VisibleVariables { get; }
+        //IEnumerable<Optimize.IValueHolder> VisibleVariables { get; }
 
         State State { get; }
 

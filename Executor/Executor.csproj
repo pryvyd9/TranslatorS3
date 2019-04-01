@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Executor.cs" />
     <Compile Include="ExecutorProxy.cs" />
+    <Compile Include="Invoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SymbolTable.cs" />
   </ItemGroup>

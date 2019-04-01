@@ -47,8 +47,7 @@ namespace TranslatorS3
 
         private IDocument document;
 
-        private readonly Window logWindow;
-        private bool shouldCloseLogWindow = false;
+        private Window logWindow;
 
         private readonly Timer timer;
 
@@ -70,25 +69,10 @@ namespace TranslatorS3
         {
             InitializeComponent();
 
-            logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
-            logWindow.Closing += LogWindow_Closing;
+            //logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
+            //logWindow.Closing += LogWindow_Closing;
 
             timer = new Timer() { AutoReset = false };
-        }
-
-
-        private IEnumerable<IParserError> GetErrors()
-        {
-            if (SyntaxParserResult.Errors == null)
-                return SemanticParserResult.Errors;
-
-            if (SemanticParserResult.Errors == null)
-                return SyntaxParserResult.Errors;
-
-            var errors = SyntaxParserResult.Errors
-               .Concat(SemanticParserResult.Errors);
-
-            return errors;
         }
 
         private void InitializeParsers()
@@ -210,15 +194,22 @@ namespace TranslatorS3
 
 
 
-
-        private void LogWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private IEnumerable<IParserError> GetErrors()
         {
-            if (!shouldCloseLogWindow)
-            {
-                e.Cancel = true;
-                (sender as Window).Hide();
-            }
+            if (SyntaxParserResult.Errors == null)
+                return SemanticParserResult.Errors;
+
+            if (SemanticParserResult.Errors == null)
+                return SyntaxParserResult.Errors;
+
+            var errors = SyntaxParserResult.Errors
+               .Concat(SemanticParserResult.Errors);
+
+            return errors;
         }
+
+
+
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -258,25 +249,28 @@ namespace TranslatorS3
             Document_Updated(document);
         }
 
-        private void Executor_Input(Action<object> input)
+        private void Window_Closed(object sender, EventArgs e)
         {
-            consoleWindow.Input(input);
-        }
+            var contentWithNoLastLineEnding = document.Text
+                .Take(document.Text.Length - 2)
+                .ToStr();
 
-        private void Executor_Ended()
-        {
-            consoleWindow.Close();
-        }
+            Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
 
-        private void Executor_Started()
-        {
-            consoleWindow = new CWindow
+            if (SyntaxParserResult != null)
             {
-                Height = 480,
-                Width = 640,
-            };
-            consoleWindow.Show();
-            Executor.Output = consoleWindow.Output;
+                var errors = GetErrors()
+                    .GroupBy(n => n.Tag)
+                    .Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
+
+                Save(Configuration.Path.ErrorsTxt, string.Join("\r\n\r\n", errors));
+            }
+
+            SaveParsedTokensTxt(TokenParserResult);
+
+            logWindow?.Close();
+
+            Configuration.Save();
         }
 
         private void Update(IDocument document)
@@ -362,33 +356,7 @@ namespace TranslatorS3
 
         }
 
-        
 
-        private void Window_Closed(object sender, EventArgs e)
-        {
-            var contentWithNoLastLineEnding = document.Text
-                .Take(document.Text.Length - 2)
-                .ToStr();
-
-            Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
-
-            if (SyntaxParserResult != null)
-            {
-                var errors = GetErrors()
-                    .GroupBy(n => n.Tag)
-                    .Select(n => $"{n.Key}\r\n{string.Join("\r\n", n.Select(m => m.Message))}");
-
-                Save(Configuration.Path.ErrorsTxt, string.Join("\r\n\r\n", errors));
-            }
-
-            SaveParsedTokensTxt(TokenParserResult);
-
-            shouldCloseLogWindow = true;
-
-            logWindow.Close();
-
-            Configuration.Save();
-        }
 
         private void ShowConfiguration_Click(object sender, RoutedEventArgs e)
         {
@@ -409,23 +377,96 @@ namespace TranslatorS3
 
         private void ShowLogger_Click(object sender, RoutedEventArgs e)
         {
-            if(logWindow.WindowState == WindowState.Minimized)
+            if (logWindow != null)
             {
-                logWindow.WindowState = WindowState.Normal;
+                if (logWindow.WindowState == WindowState.Minimized)
+                {
+                    SystemCommands.RestoreWindow(logWindow);
+                }
+
+                if (!logWindow.IsActive)
+                {
+                    logWindow.Activate();
+                }
+
+                return;
             }
 
-            if (logWindow.IsVisible == false)
-            {
-                logWindow.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                logWindow.Show();
-            }
+            logWindow = new Window() { Content = new LogView.LogView(), Title = "Logger" };
+            logWindow.Closed += (s, _) => logWindow = null;
+
+            logWindow.Show();
         }
 
+        #region Executor
+
+        private void Executor_Input(Action<object> input)
+        {
+            consoleWindow.Input(input);
+        }
+
+        private void Executor_Ended()
+        {
+            consoleWindow.Close();
+        }
+
+        private void Executor_Started()
+        {
+            consoleWindow = new CWindow
+            {
+                Height = 480,
+                Width = 640,
+            };
+            consoleWindow.Show();
+            consoleWindow.Closed += ConsoleWindow_Closed;
+            Executor.Output = consoleWindow.Output;
+        }
+
+        private async void ConsoleWindow_Closed(object sender, EventArgs e)
+        {
+            await Executor.Abort();
+        }
+
+        private async void StepOver_Click(object sender, RoutedEventArgs e)
+        {
+            if (Executor.State != State.Idle && Executor.State != State.Paused)
+            {
+                return;
+            }
+
+            while (RpnParserResult is null)
+            {
+                await Task.Delay(10);
+            }
+
+            Executor.ExecutionNodes = RpnParserResult.RpnStream;
+
+            Executor.StepOver();
+        }
+
+        private async void Run_Click(object sender, RoutedEventArgs e)
+        {
+            if (Executor.State != State.Idle && Executor.State != State.Paused)
+            {
+                return;
+            }
 
 
+            while (RpnParserResult is null)
+            {
+                await Task.Delay(10);
+            }
+
+            Executor.ExecutionNodes = RpnParserResult.RpnStream;
+
+            Executor.Run();
+        }
+
+        #endregion
+
+
+
+        #region Save
 
         private static void Save(string path, string contents)
         {
@@ -601,39 +642,8 @@ namespace TranslatorS3
             catch { }
         }
 
-        private async void StepOver_Click(object sender, RoutedEventArgs e)
-        {
-            if (Executor.State != State.Idle && Executor.State != State.Paused)
-            {
-                return;
-            }
-
-            while (RpnParserResult is null)
-            {
-                await Task.Delay(10);
-            }
-
-            Executor.ExecutionNodes = RpnParserResult.RpnStream;
-
-            Executor.StepOver();
-        }
-
-        private async void Run_Click(object sender, RoutedEventArgs e)
-        {
-            if (Executor.State != State.Idle && Executor.State != State.Paused)
-            {
-                return;
-            }
+        #endregion
 
 
-            while (RpnParserResult is null)
-            {
-                await Task.Delay(10);
-            }
-
-            Executor.ExecutionNodes = RpnParserResult.RpnStream;
-
-            Executor.Run();
-        }
     }
 }

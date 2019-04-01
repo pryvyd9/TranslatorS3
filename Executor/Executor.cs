@@ -9,151 +9,6 @@ using O = Core.Optimize;
 namespace Executor
 {
 
-    internal static class Invoker
-    {
-        private static readonly Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>> operations =
-           new Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>>
-           {
-                // We omit that left operand must be either declaration or reference.
-                // It must be checked on syntax analysis stage.
-                ["="] = async (stack, executor, argumentCount) =>
-                {
-                    var right = (O.IValueHolder)stack.Pop();
-                    var left = (O.IValueHolder)stack.Pop();
-
-                    if (!executor.TryGetValue(right, out var value))
-                        throw new Exception("Right operand was not declared.");
-
-                    executor.TrySetValue(left, value);
-                    stack.Push(left);
-                },
-                ["<"] = async (stack, executor, argumentCount) =>
-                {
-                    var resultIndex = stack.Count;
-
-                    var resultType = O.DataType.Int;
-
-                    var right = (O.IValueHolder)stack.Pop();
-                    var left = (O.IValueHolder)stack.Pop();
-
-                    if (!executor.TryGetValue(left, out var lValue))
-                        throw new Exception("Left operand was not declared.");
-
-                    if (!executor.TryGetValue(right, out var rValue))
-                        throw new Exception("Right operand was not declared.");
-
-                    var result = ((int)lValue < (int)rValue) ? 1 : 0;
-
-                    var node = Executor.CreateLiteral(result, resultType, resultIndex);
-
-                    stack.Push(node);
-                },
-                ["-"] = async (stack, executor, argumentCount) =>
-                {
-                    var resultIndex = stack.Count;
-
-                    var resultType = O.DataType.Int;
-
-                    var right = (O.IValueHolder)stack.Pop();
-
-                    if (!executor.TryGetValue(right, out var rValue))
-                        throw new Exception("Right operand was not declared.");
-
-                    int result;
-
-                    if (argumentCount == 2)
-                    {
-                        var left = (O.IValueHolder)stack.Pop();
-
-                        if (!executor.TryGetValue(left, out var lValue))
-                            throw new Exception("Left operand was not declared.");
-
-                        result = (int)lValue - (int)rValue;
-                    }
-                    else
-                    {
-                        result = -(int)rValue;
-                    }
-
-                    var node = Executor.CreateLiteral(result, resultType, resultIndex);
-
-                    stack.Push(node);
-                },
-
-              
-
-           };
-
-        private static readonly Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>> functions =
-            new Dictionary<string, Func<Stack<O.INode>, Executor, int, Task>>
-            {
-                ["system.io.write"] = async (stack, executor, argumentCount) =>
-                {
-                    var param = stack.Pop();
-                    switch (param)
-                    {
-                        case O.IValueHolder v:
-                            executor.Print(v);
-                            return;
-                        default:
-                            throw new Exception("Non-value-holder object cannot be printed.");
-                    }
-                },
-                ["system.io.read"] = async (stack, executor, argumentCount) =>
-                {
-                    var param = stack.Pop();
-                    switch (param)
-                    {
-                        case O.IValueHolder v:
-                            var s = await executor.ReadAsync();
-                            try
-                            {
-                                if (executor.TrySetValue(v, s))
-                                {
-                                    stack.Push(param);
-                                    return;
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                throw;
-                            }
-                            throw new Exception("Value could not be set into variable.");
-                        default:
-                            throw new Exception("Read can only be declaration or reference.");
-                    }
-                },
-            };
-
-        public static async Task Invoke(O.ICall call, Executor executor)
-        {
-            var stack = executor.stack;
-
-            if (call.CallType == O.CallType.Function)
-            {
-                if (!functions.ContainsKey(call.Name))
-                {
-                    Logger.Add("executor", $"Function '{call.Name}' was not found.");
-                    throw new Exception("Function was not found.");
-                }
-
-                var func = functions[call.Name];
-                await func(stack, executor, call.ArgumentNumber);
-            }
-            else
-            {
-                if (!operations.ContainsKey(call.Name))
-                {
-                    Logger.Add("executor", $"Operation '{call.Name}' was not found.");
-                    throw new Exception("Operation was not found.");
-                }
-
-                var func = operations[call.Name];
-                await func(stack, executor, call.ArgumentNumber);
-            }
-        }
-    }
-
     internal class Executor : IExecutor
     {
         private O.INode[] stream;
@@ -164,8 +19,6 @@ namespace Executor
         public IEnumerable<O.INode> ExecutionNodes { get => stream; set => stream = value.ToArray(); }
 
         public IEnumerable<INode> GrammarNodes { get => grammarNodes; set => grammarNodes = value.ToArray(); }
-
-        public IEnumerable<IVariable> VisibleVariables => throw new NotImplementedException();
 
         public int[] BreakPositions { get; set; }
 
@@ -206,14 +59,12 @@ namespace Executor
 
 
 
-        public Task Abort()
+        public async Task Abort()
         {
-            Ended?.Invoke();
-
-            throw new NotImplementedException();
+            await Close();
         }
 
-        private void Close()
+        private async Task Close()
         {
             position = 0;
             State = State.Idle;
@@ -231,6 +82,13 @@ namespace Executor
                     await StepOver();
                 }
             }
+        }
+
+        private async Task Start()
+        {
+            Started?.Invoke();
+            stack.Clear();
+            Logger.Clear("executor");
         }
 
         internal async Task<string> ReadAsync()
@@ -303,64 +161,45 @@ namespace Executor
 
         internal void Print(O.IValueHolder obj)
         {
-            switch (obj)
-            {
-                case O.IDeclare v:
-                    {
-                        if (TryGetValue(v, out var value))
-                            Output(value);
-                        else
-                            Output("None");
-                    }
-                    break;
-                case O.IReference v:
-                    {
-                        if (TryGetValue(v, out var value))
-                            Output(value);
-                        else
-                            Output("None");
-                    }
-                    break;
-                case O.ILiteral v:
-                    {
-                        Output(v.Value);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            
+            Output(GetString(obj));
+           
         }
 
-        private async Task Jump(O.IJump jump)
+        private string GetString(O.IValueHolder obj)
+        {
+            if (!TryGetValue(obj, out var value))
+                throw new Exception("Unsupported ValueHolder.");
+
+            return value?.ToString() ?? "None";
+          
+        }
+
+        private void Jump(O.IJump jump)
         {
             var reference = (O.IReference)stack.Pop();
             switch (jump.JumpType)
             {
                 case O.JumpType.Unconditional:
+                    Log("jmp");
                     position = reference.Address - 1;
                     break;
                 case O.JumpType.Positive:
                     {
                         var valueHolder = (O.IValueHolder)stack.Pop();
-                        if (TryGetValue(valueHolder, out var value))
+                        if (TryGetValue(valueHolder, out var value) && (int)value != 0)
                         {
-                            if ((int)value != 0)
-                            {
-                                position = reference.Address - 1;
-                            }
+                            Log("jp");
+                            position = reference.Address - 1;
                         }
                     }
                     break;
                 case O.JumpType.Negative:
                     {
                         var valueHolder = (O.IValueHolder)stack.Pop();
-                        if (TryGetValue(valueHolder, out var value))
+                        if (TryGetValue(valueHolder, out var value) && (int)value == 0)
                         {
-                            if ((int)value == 0)
-                            {
-                                position = reference.Address - 1;
-                            }
+                            Log("jn");
+                            position = reference.Address - 1;
                         }
                     }
                     break;
@@ -370,17 +209,27 @@ namespace Executor
 
         }
 
+        internal void Log(string message)
+        {
+            var values = this.stack
+                .OfType<O.IValueHolder>()
+                .Select(n => GetString(n));
+
+            var stack = string.Join("|", values);
+
+            Logger.Add("executor", new { Id = position, Mesage = message, Stack = stack });
+        }
+
         public async Task StepOver()
         {
             if (position >= stream.Length)
             {
-                Close();
+                await Close();
                 return;
             }
             else if (position == 0)
             {
-                Started?.Invoke();
-                stack.Clear();
+                await Start();
             }
 
             State = State.Running;
@@ -388,20 +237,23 @@ namespace Executor
             switch (stream[position])
             {
                 case O.IDeclare declaration:
+                    Log($"decl:{declaration.Name}");
                     symbolTable.Declare(declaration);
                     stack.Push(declaration);
                     break;
                 case O.IReference reference:
+                    Log($"&{reference.Address}:{reference.Name}");
                     stack.Push(reference);
                     break;
                 case O.ILiteral literal:
+                    Log(literal.Value.ToString());
                     stack.Push(literal);
                     break;
                 case O.ICall call:
                     await Invoker.Invoke(call, this);
                     break;
                 case O.IJump jump:
-                    await Jump(jump);
+                    Jump(jump);
                     break;
                 default:
                     throw new Exception("Unsupported execution node.");

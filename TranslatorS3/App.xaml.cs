@@ -16,6 +16,7 @@ using TranslatorS3.Entities;
 using ScriptEditor;
 using System.Windows.Media;
 using static System.IO.File;
+using E = Core.Entity;
 
 namespace TranslatorS3
 {
@@ -33,7 +34,7 @@ namespace TranslatorS3
         private ISemanticParserResult SemanticParserResult { get; set; }
         private IRpnParserResult RpnParserResult { get; set; }
 
-        private IEnumerable<IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
+        private IEnumerable<E.IParsedToken> ParsedTokens => TokenParserResult.ParsedTokens;
 
 
         private IExecutor Executor { get; set; }
@@ -203,7 +204,7 @@ namespace TranslatorS3
             //var predescenceTable = new PredescenceTable();
             //predescenceTable.Parse(parser);
 
-            //var f = (Func<IEnumerable<IParsedToken>>)(() => ParsedTokens);
+            //var f = (Func<IEnumerable<E.IParsedToken>>)(() => ParsedTokens);
 
             //parser = ParserManager.InitializeParser(
             //   "SyntaxPredescenceTableParserWithPOLIZ.dll",
@@ -491,12 +492,12 @@ namespace TranslatorS3
 
             var list = copies.Select(n =>
             {
-                if (n is IMedium m)
+                if (n is E.IMedium m)
                 {
-                    return $"{n}::={(n as IFactor).ToString()}";
+                    return $"{n}::={(n as E.IFactor).ToString()}";
                 }
 
-                if (n is IClass c)
+                if (n is E.IClass c)
                 {
                     return $"{n}::={string.Join("|", c.Symbols.OrderBy(k => k))}";
                 }
@@ -516,12 +517,12 @@ namespace TranslatorS3
 
             var list = copies.Select(n =>
             {
-                if (n is IMedium m)
+                if (n is E.IMedium m)
                 {
                     return n.ToString() + "::=" + string.Join("|", m.Cases.Select(k => string.Join("", k.Count() == 0 ? new List<string> { "^" } : k.Select(j => j.ToString()))));
                 }
 
-                if (n is IClass c)
+                if (n is E.IClass c)
                 {
                     return $"{n}::={string.Join("|", c.Symbols.OrderBy(k => k))}";
                 }
@@ -541,10 +542,10 @@ namespace TranslatorS3
 
             var unsorted = grammar.Nodes.Unsorted;
 
-            var sortedNodes = unsorted.OfType<IMedium>().Where(n => !(n is IDefinedToken)).Cast<INode>()
-                .Concat(unsorted.OfType<IClass>())
-                .Concat(unsorted.OfType<IDefinedToken>().Where(n => !(n is ITerminal)))
-                .Concat(unsorted.OfType<ITerminal>())
+            var sortedNodes = unsorted.OfType<E.IMedium>().Where(n => !(n is E.IClass)).Cast<E.INode>()
+                .Concat(unsorted.OfType<E.IClass>())
+                .Concat(unsorted.OfType<E.IDefinedToken>().Where(n => !(n is E.ITerminal)))
+                .Concat(unsorted.OfType<E.ITerminal>())
                 .Where(n => !ignoredNodes.Contains(n.Name));
 
 
@@ -610,7 +611,7 @@ namespace TranslatorS3
                 }
             }
 
-            string GetColumn(INode horizontalNode, string str)
+            string GetColumn(E.INode horizontalNode, string str)
             {
                 return string.Format("{0,-" + horizontalNode.ToString().Length + "}|", str);
             }

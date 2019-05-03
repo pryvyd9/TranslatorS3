@@ -3,10 +3,7 @@
 open System.Xml.Linq
 
 module private Xml =
-    let private (|NotNull|_|) e =
-        match e with
-        | null -> None
-        |_-> Some e
+    let (|NotNull|_|) = function null -> None | e -> Some e
 
     let private xname name = XName.Get name
 
@@ -14,21 +11,21 @@ module private Xml =
 
     let element name (e:XContainer) =
         match name |> xname |> e.Element with
-        |NotNull e -> e
-        |_->null
+        | NotNull e -> e
+        | _ -> null
 
     let elements name (e:XContainer) =
         match name |> xname |> e.Elements with
-        |NotNull e -> e
-        |_->null
+        | NotNull e -> e
+        | _ -> null
 
     let allElements (e:XContainer) =
         e.Elements () |> List.ofSeq
 
     let attribute name (e:XElement) =
         match name |> xname |> e.Attribute with
-        |NotNull e -> e.Value
-        |_->null
+        | NotNull e -> e.Value
+        | _ -> null
 
     let load (path:string) = XDocument.Load path
 
@@ -59,52 +56,44 @@ module Types =
 
 
 
+
+
 let parseCase (caseNode:XElement) =
     let nodes = [
         for node in caseNode |> allElements ->
+
+            let attr x = attribute x node
+            
             match node.Name.LocalName with
-            | "s" ->
-               let id = node |> attribute "id" |> int
-               Stream{id=id} 
+            | "s" -> Stream{ id = attr "id" |> int } 
             | "r" ->
-                match node |> attribute "call" with
-                | null ->
-                    match node |> attribute "jmp" with
-                    | null ->
-                        match node |> attribute "jn" with
-                        | null ->
-                            match node |> attribute "ujmp" with
-                            | null ->
-                                failwith("Unsupported reference.")
-                            | ujmp -> 
-                                Ujmp |> Reference
-                        | jn -> 
-                            Jn{address=jn}
-                            |> Reference
-                    | jmp ->
-                        Jmp{address=jmp}
-                        |> Reference
-                | call ->
-                    Call{address=call;paramCount=node |> attribute "param-count" |> int}
-                    |> Reference
+                match attr "call" with
+                | NotNull n -> Call{ address = n; paramCount = attr "param-count" |> int } |> Reference
+                | _ ->
+                    match attr "jmp" with
+                    | NotNull n -> Jmp{ address = n } |> Reference
+                    | _ ->
+                        match attr "jn" with
+                        | NotNull n -> Jn{ address = n } |> Reference
+                        | _ ->
+                            match attr "ujmp" with
+                            | NotNull _ -> Ujmp |> Reference
+                            | _ -> failwith "Unsupported reference."
             | "d" ->
-                match node |> attribute "label" with
-                | null ->
-                    failwith("Unsupported definition.")
-                | label ->
-                    Label{name=label}
-                    |> Definition
-            | _ ->
-                failwith("Unsupported rule node.")
+                match attr "label" with
+                | NotNull label -> Label{ name = label } |> Definition
+                | _ -> failwith "Unsupported definition."
+            | _ -> failwith "Unsupported rule node."
     ]
 
     {
         rules = nodes; 
         streamCount = 
             match caseNode |> attribute "stream-count" with
-            | null -> None
-            | streamCount -> streamCount |> int |> Some
+            | NotNull streamCount -> streamCount |> int |> Some
+            | _ -> None
     }
+
 
 let parseStatement (statementNode:XElement) =
     let cases = [

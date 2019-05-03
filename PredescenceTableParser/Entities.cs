@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Core;
 using System.Collections.Generic;
 using System.Linq;
+using E = Core.Entity;
 
 namespace PredescenceTableParser
 {
@@ -13,24 +14,24 @@ namespace PredescenceTableParser
     {
         public IEnumerable<IParserError> Errors { get; internal set; }
 
-        public IDictionary<int, IPredescenceNode> Nodes { get; internal set; }
+        public IDictionary<int, E.IPredescenceNode> Nodes { get; internal set; }
 
     }
 
     class PredescenceTablePreview
     {
-        public IDictionary<INode, IPredescenceNode> Nodes { get; internal set; }
+        public IDictionary<E.INode, E.IPredescenceNode> Nodes { get; internal set; }
     }
 
 
     class PredescenceNodePreview
     {
-        public IDictionary<INode, Relationship> Relashionships { get; internal set; }
+        public IDictionary<E.INode, Relationship> Relashionships { get; internal set; }
     }
 
-    class PredescenceTable : IPredescenceTable
+    class PredescenceTable : E.IPredescenceTable
     {
-        public IDictionary<int, IPredescenceNode> Nodes { get; internal set; }
+        public IDictionary<int, E.IPredescenceNode> Nodes { get; internal set; }
 
         public IEnumerable<Relationship> DistinguishRelasionship(Relationship relashionship)
         {
@@ -53,7 +54,7 @@ namespace PredescenceTableParser
         }
     }
 
-    class PredescenceNode : IPredescenceNode
+    class PredescenceNode : E.IPredescenceNode
     {
         public IDictionary<int, Relationship> Relashionships { get; internal set; }
     }

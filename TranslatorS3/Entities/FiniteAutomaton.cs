@@ -5,12 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Core;
 using System.Xml.Linq;
+using E = Core.Entity;
 
 namespace TranslatorS3.Entities
 {
-    class FiniteAutomaton : IFiniteAutomaton, IEntity
+    class FiniteAutomaton : E.IFiniteAutomaton, IEntity
     {
-        private class FiniteState : IFiniteState
+        private class FiniteState : E.IFiniteState
         {
             public IDictionary<string, int> Links { get; internal set; }
 
@@ -19,7 +20,7 @@ namespace TranslatorS3.Entities
             public string TokenClass { get; internal set; }
         }
 
-        public IDictionary<int, IFiniteState> States { get; private set; }
+        public IDictionary<int, E.IFiniteState> States { get; private set; }
 
         public int StartState { get; private set; }
 
@@ -33,7 +34,7 @@ namespace TranslatorS3.Entities
                 var root = doc.Element("finite-automaton");
                 StartState = int.Parse(root.Attribute("start-state").Value);
 
-                States = new Dictionary<int, IFiniteState>() as IDictionary<int, IFiniteState>;
+                States = new Dictionary<int, E.IFiniteState>() as IDictionary<int, E.IFiniteState>;
 
                 foreach (var stateElement in doc.Element("finite-automaton").Elements("state"))
                 {

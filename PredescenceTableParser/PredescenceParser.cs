@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Core;
+using E = Core.Entity;
 
 namespace PredescenceTableParser
 {
     class PredescenceTableParser : IParser<PredescenceTableParserResult>
     {
-        private readonly INodeCollection nodes;
+        private readonly E.INodeCollection nodes;
 
-        public PredescenceTableParser(INodeCollection nodes)
+        public PredescenceTableParser(E.INodeCollection nodes)
         {
             this.nodes = nodes;
         }
@@ -31,7 +32,7 @@ namespace PredescenceTableParser
 
             var previewTable = new PredescenceTablePreview
             {
-                Nodes = nodes.ToDictionary(n => n.Key, n => n.Value as IPredescenceNode),
+                Nodes = nodes.ToDictionary(n => n.Key, n => n.Value as E.IPredescenceNode),
             };
 
 
@@ -45,21 +46,21 @@ namespace PredescenceTableParser
                     n => new PredescenceNode
                     {
                         Relashionships = n.Value.Relashionships.ToDictionary(m => m.Key.Id, m => m.Value)
-                    } as IPredescenceNode
+                    } as E.IPredescenceNode
                 ),
             };
 
         }
 
 
-        private bool IsAcceptableNontoken(INode node)
+        private bool IsAcceptableNontoken(E.INode node)
         {
-            return node is IMedium && !(node is IDefinedToken);
+            return node is E.IMedium && !(node is E.IDefinedToken);
         }
 
 
 
-        private void CheckConsistency(HashSet<(INode, INode)> equals, HashSet<(INode, INode)> lower, HashSet<(INode, INode)> greater)
+        private void CheckConsistency(HashSet<(E.INode, E.INode)> equals, HashSet<(E.INode, E.INode)> lower, HashSet<(E.INode, E.INode)> greater)
         {
          
             foreach (var lowerItem in lower)
@@ -93,9 +94,9 @@ namespace PredescenceTableParser
 
 
 
-        private Dictionary<INode, PredescenceNodePreview> FillPreviewTable(HashSet<(INode, INode)> equals, HashSet<(INode, INode)> lower, HashSet<(INode, INode)> greater)
+        private Dictionary<E.INode, PredescenceNodePreview> FillPreviewTable(HashSet<(E.INode, E.INode)> equals, HashSet<(E.INode, E.INode)> lower, HashSet<(E.INode, E.INode)> greater)
         {
-            var table = new Dictionary<INode, PredescenceNodePreview>();
+            var table = new Dictionary<E.INode, PredescenceNodePreview>();
 
             AddRelationShips(equals, Relationship.Equal);
             AddRelationShips(lower, Relationship.Lower);
@@ -103,7 +104,7 @@ namespace PredescenceTableParser
 
             return table;
 
-            void AddRelationShips(HashSet<(INode, INode)> hashSet, Relationship relashionship)
+            void AddRelationShips(HashSet<(E.INode, E.INode)> hashSet, Relationship relashionship)
             {
                 foreach (var (left, right) in hashSet)
                 {
@@ -122,7 +123,7 @@ namespace PredescenceTableParser
                     {
                         table[left] = new PredescenceNodePreview()
                         {
-                            Relashionships = new Dictionary<INode, Relationship>
+                            Relashionships = new Dictionary<E.INode, Relationship>
                             {
                                 [right] = relashionship,
                             },
@@ -134,11 +135,11 @@ namespace PredescenceTableParser
 
 
 
-        private HashSet<(INode, INode)> FindEquals()
+        private HashSet<(E.INode, E.INode)> FindEquals()
         {
-            HashSet<(INode, INode)> hashSet = new HashSet<(INode, INode)>();
+            HashSet<(E.INode, E.INode)> hashSet = new HashSet<(E.INode, E.INode)>();
 
-            foreach (var node in nodes.Where(n=>IsAcceptableNontoken(n)).OfType<IMedium>())
+            foreach (var node in nodes.Where(n=>IsAcceptableNontoken(n)).OfType<E.IMedium>())
             {
                 foreach (var @case in node.Cases)
                 {
@@ -153,15 +154,15 @@ namespace PredescenceTableParser
         }
 
 
-        private HashSet<(INode, INode)> EqualsLowerThanFirstThrusting(HashSet<(INode, INode)> equals)
+        private HashSet<(E.INode, E.INode)> EqualsLowerThanFirstThrusting(HashSet<(E.INode, E.INode)> equals)
         {
-            var lowerThan = new HashSet<(INode, INode)>();
+            var lowerThan = new HashSet<(E.INode, E.INode)>();
 
             foreach (var (left, right) in equals)
             {
                 if (IsAcceptableNontoken(right))
                 {
-                    var rightFirst = FirstThrusting(right as IMedium, new HashSet<INode>());
+                    var rightFirst = FirstThrusting(right as E.IMedium, new HashSet<E.INode>());
 
                     lowerThan.UnionWith(rightFirst.Select(n => (left, n)));
                 }
@@ -170,27 +171,27 @@ namespace PredescenceTableParser
             return lowerThan;
         }
 
-        private HashSet<(INode, INode)> EqualsLastThrustingGreaterThanFirstThrusting(HashSet<(INode, INode)> equals)
+        private HashSet<(E.INode, E.INode)> EqualsLastThrustingGreaterThanFirstThrusting(HashSet<(E.INode, E.INode)> equals)
         {
-            var greaterThan = new HashSet<(INode, INode)>();
+            var greaterThan = new HashSet<(E.INode, E.INode)>();
 
             foreach (var (left, right) in equals)
             {
                 if (IsAcceptableNontoken(left))
                 {
-                    var leftLast = LastThrusting(left as IMedium, new HashSet<INode>());
+                    var leftLast = LastThrusting(left as E.IMedium, new HashSet<E.INode>());
                     greaterThan.UnionWith(leftLast.Select(leftItem => (leftItem, right)));
 
                     if (IsAcceptableNontoken(right))
                     {
-                        var rightFirst = FirstThrusting(right as IMedium, new HashSet<INode>());
-                        //var leftLast = LastThrusting(left as IMedium, new HashSet<INode>());
+                        var rightFirst = FirstThrusting(right as E.IMedium, new HashSet<E.INode>());
+                        //var leftLast = LastThrusting(left as E.IMedium, new HashSet<E.INode>());
 
                         greaterThan.UnionWith(rightFirst.SelectMany(rightItem => leftLast.Select(leftItem => (leftItem, rightItem))));
                     }
                     //else
                     //{
-                    //    var leftLast = LastThrusting(left as IMedium, new HashSet<INode>());
+                    //    var leftLast = LastThrusting(left as E.IMedium, new HashSet<E.INode>());
 
                     //    lowerThan.UnionWith(leftLast.Select(leftItem => (leftItem, right)));
                     //}
@@ -203,7 +204,7 @@ namespace PredescenceTableParser
 
 
 
-        private HashSet<INode> FirstThrusting(IMedium factor, HashSet<INode> hashSet)
+        private HashSet<E.INode> FirstThrusting(E.IMedium factor, HashSet<E.INode> hashSet)
         {
             var first = factor.Cases.Where(n => n.Count() > 0).Select(n => n.First());
 
@@ -216,7 +217,7 @@ namespace PredescenceTableParser
 
                 if (IsAcceptableNontoken(firstItem))
                 {
-                    FirstThrusting((IMedium)firstItem, hashSet);
+                    FirstThrusting((E.IMedium)firstItem, hashSet);
                 }
 
             }
@@ -224,7 +225,7 @@ namespace PredescenceTableParser
             return hashSet;
         }
 
-        private HashSet<INode> LastThrusting(IMedium medium, HashSet<INode> hashSet)
+        private HashSet<E.INode> LastThrusting(E.IMedium medium, HashSet<E.INode> hashSet)
         {
             var last = medium.Cases.Where(n => n.Count() > 0).Select(n=>n.Last());
 
@@ -237,7 +238,7 @@ namespace PredescenceTableParser
 
                 if (IsAcceptableNontoken(lastItem))
                 {
-                    LastThrusting(lastItem as IMedium, hashSet);
+                    LastThrusting(lastItem as E.IMedium, hashSet);
                 }
             }
 

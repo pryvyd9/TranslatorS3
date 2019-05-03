@@ -64,9 +64,9 @@ namespace ConsoleWindow
             present.Focus();
         }
 
-        private void Present_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void Present_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == System.Windows.Input.Key.Enter)
+            if (e.Key == Key.Enter)
             {
                 if (inputs.Count > 0)
                 {

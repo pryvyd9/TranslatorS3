@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core
+namespace Core.Entity
 {
     public interface IEntity<T> where T : IParserResult
     {

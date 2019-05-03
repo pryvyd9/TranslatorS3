@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Core;
 using O = Core.Optimize;
+using E = Core.Entity;
 
 namespace Executor
 {
@@ -12,13 +13,13 @@ namespace Executor
     internal class Executor : IExecutor
     {
         private O.INode[] stream;
-        private INode[] grammarNodes;
+        private E.INode[] grammarNodes;
 
         private int position;
 
         public IEnumerable<O.INode> ExecutionNodes { get => stream; set => stream = value.ToArray(); }
 
-        public IEnumerable<INode> GrammarNodes { get => grammarNodes; set => grammarNodes = value.ToArray(); }
+        public IEnumerable<E.INode> GrammarNodes { get => grammarNodes; set => grammarNodes = value.ToArray(); }
 
         public int[] BreakPositions { get; set; }
 

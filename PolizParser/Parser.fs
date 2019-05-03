@@ -5,7 +5,7 @@ open System.Collections.Generic
 [<AutoOpen>]
 module Types =
 
-    type OperatorStackNode = {grammarNode:Core.IDefinedOperator;executionNode:Core.IExecutionStreamNode}
+    type OperatorStackNode = {grammarNode:Core.Entity.IDefinedOperator;executionNode:Core.IExecutionStreamNode}
     
     type OperatorStack = OperatorStackNode list
 
@@ -20,29 +20,29 @@ module Parse =
     let ( ?<- ) object name value =
         object.GetType().GetProperty(name).SetValue(object, value)
 
-    let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        stream |> List.map(function 
-        | :? Core.IVariable as v -> v.Name 
-        | :? Core.ILiteral as l -> string l.Value 
-        | :? Core.ICall as c -> (c.ParamCount |> string) + " " + c.Address + " call"
-        | :? Core.IUserJump -> "ujmp"
-        | :? Core.IJumpConditionalNegative as j -> j.Label.Name + " jn"
-        | :? Core.IJump as j -> j.Label.Name + " jmp"
-        | :? Core.ILabel as l -> l.Name + ":"
-        | x -> 
-            match x with
-            | :? Core.IDefinedStreamNode as s ->
-                match nodes |> Seq.tryFind(fun y -> y.Id = s.GrammarNodeId) with
-                | Some n -> n.Name
-                | None -> "unsupported"
-                //(nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name
-            | _ ->
-                "unsupported"
-        ) |> String.concat " "
+    //let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.Entity.INode seq) =
+    //    stream |> List.map(function 
+    //    | :? Core.IVariable as v -> v.Name 
+    //    | :? Core.ILiteral as l -> string l.Value 
+    //    | :? Core.ICall as c -> (c.ParamCount |> string) + " " + c.Address + " call"
+    //    | :? Core.IUserJump -> "ujmp"
+    //    | :? Core.IJumpConditionalNegative as j -> j.Label.Name + " jn"
+    //    | :? Core.IJump as j -> j.Label.Name + " jmp"
+    //    | :? Core.ILabel as l -> l.Name + ":"
+    //    | x -> 
+    //        match x with
+    //        | :? Core.IDefinedStreamNode as s ->
+    //            match nodes |> Seq.tryFind(fun y -> y.Id = s.GrammarNodeId) with
+    //            | Some n -> n.Name
+    //            | None -> "unsupported"
+    //            //(nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name
+    //        | _ ->
+    //            "unsupported"
+    //    ) |> String.concat " "
 
 
 
-    let parse rootScope (nodes:Core.INode seq) (statementRules:Statement list) =
+    let parse rootScope (nodes:Core.Entity.INode seq) (statementRules:Statement list) =
         let rec processScope (scope:Core.IScope) =
             if scope.Stream <> null
             then
@@ -109,7 +109,7 @@ module Parse =
                         operator ? OperandCount <- 1
 
                     match grammarNode with
-                    | :? Core.IDefinedOperator as definedOperator ->
+                    | :? Core.Entity.IDefinedOperator as definedOperator ->
                         if not stacks.IsEmpty
                         then
                             while not stacks.Head.Value.IsEmpty && definedOperator.Priority < (stacks.Head.Value.Head.grammarNode).Priority do
@@ -159,22 +159,25 @@ module Parse =
             let mutable (rpnStream:Core.IExecutionStreamNode list) = []
             
             let definitions = [
-                for rule in case.rules do
-                    match rule with
-                    | Definition definition ->
-                        match definition with
-                        | Label label ->
-                            yield{
-                                new Core.ILabel with
-                                    member __.Scope = statement.Scope
-                                    member __.Type = Type.None
-                                    member __.Name = label.name
-                            } :> Core.IExecutionStreamNode
-                    | _ -> ()
+                let labels = function Definition (Label x) -> Some x | _ -> None
+
+                let createLabel (l:Label) = 
+                    {
+                        new Core.ILabel with
+                            member __.Scope = statement.Scope
+                            member __.Type = Type.None
+                            member __.Name = l.name
+                    } :> Core.IExecutionStreamNode
+
+                yield! 
+                    case.rules
+                    |> List.choose labels
+                    |> List.map createLabel
             ]
+
             
            
-            let put stream x =
+            let put x =
                 rpnStream <- rpnStream @ [x :> Core.IExecutionStreamNode]
 
             let putStream x =
@@ -191,9 +194,8 @@ module Parse =
             for rule in case.rules do
                 match rule with     
                 | Stream stream -> rpnStreams.[stream.id] |> List.ofSeq |> putStream
-                | Definition definition ->
-                    match definition with
-                    | Label label -> labelsWithName label.name |> put (label.name)
+                | Definition (Label label) ->
+                    labelsWithName label.name |> put
                           
                 | Reference reference ->
                     match reference with
@@ -204,29 +206,29 @@ module Parse =
                             member __.ParamCount = call.paramCount
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> put ("call " + call.address + " with " + (call.paramCount |> string))
+                        } |> put
                     | Jmp jmp ->
                         {
                             new Core.IJump with
                             member __.Label = labelsWithName jmp.address
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> put ("jmp " + jmp.address)
+                        } |> put
                     | Jn jn ->
                         {
                             new Core.IJumpConditionalNegative with
                             member __.Label = labelsWithName jn.address
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> put  ("jn " + jn.address)
+                        } |> put
                     | Ujmp ->
-                        let label = (statement.Streams |> Seq.last |> Seq.rev |> Seq.item 1) :?> Core.IDefinedLabel
+                        let label = (statement.Streams |> Seq.last |> Seq.rev |> Seq.item 1) :?> Core.IDefinedLabel 
                         {
                             new Core.IUserJump with
-                            member __.Label = label:>Core.ILabel
+                            member __.Label = label :> Core.ILabel
                             member __.Scope = statement.Scope
                             member __.Type = Type.None
-                        } |> put  ("ujmp " + label.Name)
+                        } |> put
             
             rpnStream
 
@@ -250,30 +252,26 @@ module Optimize =
     // : local name (label names)
     let getString node =
         match box node with
-        | :? IDeclare as d ->
-            "decl:" + d.Name
-        | :? ILiteral as l ->
-            l.Value |> string
-        | :? IReference as r ->
-            "&" + (r.Address |> string) + ":" + r.Name
+        | :? IDeclare as d -> "decl:" + d.Name
+        | :? ILiteral as l -> l.Value |> string
+        | :? IReference as r -> "&" + (r.Address |> string) + ":" + r.Name
         | :? ICall as c ->
             match c.CallType with
             | CallType.Function ->
                 "call@" + c.Name + "#" + (c.ArgumentNumber |> string)
             | CallType.Operator ->
                 c.Name + "#" + (c.ArgumentNumber |> string)
-            | _ -> failwith("Undefined CallType")
+            | _ -> failwith "Undefined CallType"
         | :? IJump as j ->
             match j.JumpType with
             | JumpType.Unconditional -> "jmp"
             | JumpType.Negative -> "jn"
             | JumpType.Positive -> "jp"
-            | _ -> failwith("Undefined JumpType")
-        | _ ->
-            "undefined"
+            | _ -> failwith "Undefined JumpType"
+        | _ -> "undefined"
         
 
-    let optimize (rootScope:Core.IScope) (nodes:Core.INode seq) =
+    let optimize (rootScope:Core.IScope) (nodes:Core.Entity.INode seq) =
         let rpnStream = rootScope.GetRpnConsistentStream()
 
         let mutable i = 0
@@ -427,12 +425,12 @@ module Optimize =
         optimizedStream
 
 
-type RpnParser(grammarNodes:Core.INode seq, statementRulesXmlPath:string) =
+type RpnParser(grammarNodes:Core.Entity.INode seq, statementRulesXmlPath:string) =
 
     let statementRules = StatementRuleParser.parse statementRulesXmlPath
 
     member val RootScope:Core.IScope = null with get, set
-    member val ParsedTokens:Core.IParsedToken seq = null with get, set
+    member val ParsedTokens:Core.Entity.IParsedToken seq = null with get, set
 
     member this.Parse() =
         

@@ -44,6 +44,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Executor", "Executor\Execut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleWindow", "ConsoleWindow\ConsoleWindow.csproj", "{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GrammarParserF", "GrammarParserF\GrammarParserF.fsproj", "{2DA07796-9478-4362-9155-A49D18EE5340}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -122,6 +124,10 @@ Global
 		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50B947F3-CB2B-46DE-877A-A4924BDD5AE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DA07796-9478-4362-9155-A49D18EE5340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DA07796-9478-4362-9155-A49D18EE5340}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DA07796-9478-4362-9155-A49D18EE5340}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DA07796-9478-4362-9155-A49D18EE5340}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

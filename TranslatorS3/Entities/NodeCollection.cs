@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Core;
 using System.Collections;
 using System.Linq;
+using Core.Entity;
 
 namespace TranslatorS3.Entities
 {

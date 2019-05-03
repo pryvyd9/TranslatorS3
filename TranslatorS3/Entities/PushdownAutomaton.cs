@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Core;
 using System.Xml.Linq;
+using Core.Entity;
 
 namespace TranslatorS3.Entities
 {

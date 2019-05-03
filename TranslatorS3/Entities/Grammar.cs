@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Core;
 using System.Xml.Linq;
 using GrammarParser;
+using Core.Entity;
 
 namespace TranslatorS3.Entities
 {

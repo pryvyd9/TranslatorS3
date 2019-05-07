@@ -199,6 +199,24 @@ cta=case terminal array(only one symbol terminals)-->
           </d>
         </c>
         <c>
+          <d name="dodo">
+            <c>
+              <t exec-class="statement" streamers="=|by|while|(|)|end" breakers=";" stream-max-count="7">dodo</t>
+              <n>id</n>
+              <t>=</t>
+              <n>op1</n>
+              <t>by</t>
+              <n>op1</n>
+              <t>while</t>
+              <t>(</t>
+              <n>op1</n>
+              <t>)</t>
+              <n>op</n>
+              <t>end</t>
+            </c>
+          </d>
+        </c>
+        <c>
           <d name="if">
             <c>
               <t exec-class="statement" streamers="?|:" breakers=";" stream-max-count="3">if</t>

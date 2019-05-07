@@ -39,6 +39,10 @@ namespace SemanticParser
             //    .Where(n => !string.IsNullOrWhiteSpace(n.ExecuteStreamNodeType))
             //    .ToDictionary(n => n.ExecuteStreamNodeType, n => n.Id);
 
+            //var h = nodes
+            //    .OfType<ITerminal>()
+            //    .OfType<IDefinedStatement>();
+
             statements = nodes
                 .OfType<ITerminal>()
                 .OfType<IDefinedStatement>()

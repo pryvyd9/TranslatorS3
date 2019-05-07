@@ -7,6 +7,14 @@ d - declaration
   declares label
     label=x
       where x is a label name to be declared inside the statement.
+  declares if
+    if
+      next node is a consition clause
+    then
+      next node is a then clause
+    else
+      next node is an else clause
+    
       
 r - reference
   references labels or other symbols
@@ -94,7 +102,7 @@ Remarks:
       <d label="ef"/>
     </c>
   </statement>
-  <statement name="while">
+  <!--<statement name="while">
     <c stream-count="2">
       <d label="cond"/>
       <s id="0"/>
@@ -103,11 +111,16 @@ Remarks:
       <r jmp="cond"/>
       <d label="ew"/>
     </c>
-  </statement>
+  </statement>-->
   <statement name="goto">
     <c stream-count="1">
       <s id="0"/>
       <r ujmp="true"/>
+    </c>
+  </statement>
+  <statement name="dodo">
+    <c stream-count="7">
+      
     </c>
   </statement>
 </statements>

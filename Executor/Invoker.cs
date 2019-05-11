@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Core;
 using O = Core.Optimize;
 using System.Linq;
+using System.Windows.Threading;
 
 namespace Executor
 {
@@ -204,7 +205,7 @@ namespace Executor
                     switch (param)
                     {
                         case O.IValueHolder v:
-                            executor.Print(v);
+                            Dispatcher.CurrentDispatcher.Invoke(() => executor.Print(v), DispatcherPriority.Background);
                             return;
                         default:
                             throw new Exception("Non-value-holder object cannot be printed.");

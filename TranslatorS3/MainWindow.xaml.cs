@@ -42,6 +42,7 @@ namespace TranslatorS3
 
         public event RoutedEventHandler NewFileClick;
         public event RoutedEventHandler OpenFileClick;
+        public event RoutedEventHandler SaveFileClick;
 
 
 
@@ -79,6 +80,11 @@ namespace TranslatorS3
         private void NewFile_Click(object sender, RoutedEventArgs e)
         {
             NewFileClick?.Invoke(sender, e);
+        }
+
+        private void SaveFile_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileClick?.Invoke(sender, e);
         }
     }
 }

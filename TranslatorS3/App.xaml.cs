@@ -19,6 +19,7 @@ using static System.IO.File;
 
 namespace TranslatorS3
 {
+
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
@@ -54,10 +55,10 @@ namespace TranslatorS3
         private Window logWindow;
         private CWindow consoleWindow;
 
-
-
-
-
+        //private delegate void AnalysisFinishedEventHandler();
+        //private event AnalysisFinishedEventHandler AnalysisFinished;
+        private bool isBeingAnalysed;
+        private bool isDocumentBeingUpdated;
 
         #region Initialize
 
@@ -75,6 +76,7 @@ namespace TranslatorS3
 
             mainWindow.NewFileClick += MainWindow_NewFileClick;
             mainWindow.OpenFileClick += MainWindow_OpenFileClick;
+            mainWindow.SaveFileClick += MainWindow_SaveFileClick;
 
             Editor.DocumentUpdated += Document_Updated;
             Editor.DocumentFocused += Document_Focused;
@@ -281,6 +283,15 @@ namespace TranslatorS3
             }
         }
 
+        private void SaveDocument(string path, IDocument document)
+        {
+            var contentWithNoLastLineEnding = document.Text
+               .Take(ActiveDocument.Text.Length - 2)
+               .ToStr();
+
+            WriteAllText(path, contentWithNoLastLineEnding);
+        }
+
         #endregion
 
 
@@ -345,6 +356,12 @@ namespace TranslatorS3
 
         private async void Run_Click(object sender, RoutedEventArgs e)
         {
+            while (isBeingAnalysed || isDocumentBeingUpdated)
+            {
+                MessageBox.Show("Wait until analysis is finished.");
+                await Task.Delay(100);
+            }
+
             if (Executor.State != State.Idle && Executor.State != State.Paused)
             {
                 return;
@@ -353,7 +370,7 @@ namespace TranslatorS3
 
             while (RpnParserResult is null)
             {
-                await Task.Delay(10);
+                await Task.Delay(100);
             }
 
             Executor.ExecutionNodes = RpnParserResult.RpnStream;
@@ -389,44 +406,41 @@ namespace TranslatorS3
             }
         }
 
+        private void MainWindow_SaveFileClick(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+
+            dlg.DefaultExt = ".txt";
+
+            //dlg.Filter = "JPEG Files (*.txt)|*.jpeg|PNG Files (*.png)|*.png|JPG Files (*.jpg)|*.jpg|GIF Files (*.gif)|*.gif";
+            dlg.Filter = "Text Files (*.txt)|*.txt";
+
+            bool? result = dlg.ShowDialog();
+
+            if (result ?? false)
+            {
+                // Open document.
+                string filename = dlg.FileName;
+
+                try
+                {
+                    SaveDocument(filename, ActiveDocument);
+
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show("Could not save document." + exception.Message);
+                }
+            }
+        }
+
         #endregion
 
 
 
-
-        private void Update(IDocument document)
+        private void ShowErrors(IDocument document)
         {
-            ParserManager.TokenParser.Script = document.Text;
-            TokenParserResult = ParserManager.TokenParser.Parse();
-
-            if (ParsedTokens == null)
-            {
-                mainWindow.ErrorPanel.ReplaceErrors(document, new IParserError[] { });
-
-                return;
-            }
-
-            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
-            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
-
-            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
-            SemanticParserResult = ParserManager.SemanticParser.Parse();
-
-
-            if ((SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any()) && (SemanticParserResult.Errors is null || !SemanticParserResult.Errors.Any()))
-            {
-                ParserManager.RpnParser.ParsedTokens = ParsedTokens;
-                ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
-                RpnParserResult = ParserManager.RpnParser.Parse();
-            }
-
-
-            #region Show errors
-
-
-
             var errors = GetErrors().ToArray();
-
 
             var semanticErrors = errors
                .Where(n => n.Tag == "semantic")
@@ -454,13 +468,46 @@ namespace TranslatorS3
 
 
             mainWindow.ErrorPanel.ReplaceErrors(document, errors);
+        }
 
-            #endregion
+        private void Update(IDocument document)
+        {
+            isBeingAnalysed = true;
 
+            ParserManager.TokenParser.Script = document.Text;
+            TokenParserResult = ParserManager.TokenParser.Parse();
+
+            if (ParsedTokens == null)
+            {
+                mainWindow.ErrorPanel.ReplaceErrors(document, new IParserError[] { });
+
+                return;
+            }
+
+            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
+            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
+
+            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
+            SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+
+            if ((!SyntaxParserResult.Errors?.Any() ?? true) && (!SemanticParserResult.Errors?.Any() ?? true))
+            //if ((SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any()) && (SemanticParserResult.Errors is null || !SemanticParserResult.Errors.Any()))
+            {
+                ParserManager.RpnParser.ParsedTokens = ParsedTokens;
+                ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
+                RpnParserResult = ParserManager.RpnParser.Parse();
+            }
+
+            ShowErrors(document);
+
+            isBeingAnalysed = false;
         }
 
         private void Document_Updated(IDocument document)
         {
+            isDocumentBeingUpdated = true;
+
             if (!timer.Enabled)
                 timer.Start();
 
@@ -486,7 +533,11 @@ namespace TranslatorS3
 
             timer.Elapsed += (sender, e) =>
             {
-                Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+                Dispatcher.Invoke(() =>
+                {
+                    Update(document);
+                    isDocumentBeingUpdated = false;
+                }, DispatcherPriority.Background);
             };
             isTimerAssigned = true;
             timerAssignedDocument = document;

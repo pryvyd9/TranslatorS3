@@ -39,8 +39,8 @@ namespace TranslatorS3
         private IExecutor Executor { get; set; }
 
 
-
-        private IDocument document;
+        private CoolEditor Editor => mainWindow.ScriptEditor;
+        private IDocument ActiveDocument => mainWindow.ScriptEditor.ActiveDocument;
 
 
         private readonly Timer timer;
@@ -77,11 +77,14 @@ namespace TranslatorS3
 
             mainWindow.Show();
 
+            Editor.DocumentUpdated += Document_Updated;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Configuration.Load();
+
+            IDocument document;
 
             if (Exists(Configuration.Path.ScriptTxt))
             {
@@ -107,8 +110,6 @@ namespace TranslatorS3
             Executor.Started += Executor_Started;
             Executor.Ended += Executor_Ended;
             Executor.Input += Executor_Input;
-
-            document.Updated += Document_Updated;
 
             mainWindow.ScriptEditor.OpenDocument(document);
 
@@ -136,7 +137,8 @@ namespace TranslatorS3
 
             var controlTerminals = Grammar.Nodes.Terminals.Where(n => n.IsControl).Select(n => n.Name).ToArray();
 
-            mainWindow.ScriptEditor.ApplyTextColor(document, controlTerminals, Color.FromRgb(0, 0, 255));
+            Editor.DocumentOpened += (doc) => mainWindow.ScriptEditor.ApplyTextColor(doc, controlTerminals, Color.FromRgb(0, 0, 255));
+
 
             // Parse finite automaton
 
@@ -404,8 +406,8 @@ namespace TranslatorS3
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
-            var contentWithNoLastLineEnding = document.Text
-               .Take(document.Text.Length - 2)
+            var contentWithNoLastLineEnding = ActiveDocument.Text
+               .Take(ActiveDocument.Text.Length - 2)
                .ToStr();
 
             Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
@@ -420,6 +422,9 @@ namespace TranslatorS3
             }
 
             SaveParsedTokensTxt(TokenParserResult);
+
+            SaveClassTable("Output/classTable.txt", Grammar.ClassTable);
+            SaveLexemTable("Output/lexemTable.txt", Grammar.Nodes);
 
             logWindow?.Close();
 
@@ -475,6 +480,31 @@ namespace TranslatorS3
         #endregion
 
         #region Save
+
+        //private static void SaveFiniteAutomaton(string path, IFiniteAutomaton automaton)
+        //{
+        //    var states = automaton.States.Select(n => 
+        //    {
+        //        var links = n.Value.Links.Select(m => $"{m.Key,-20} {m.Value,-20}");
+        //        $"{n.Key,-20} {string.Join("",links)}"
+        //        })
+        //}
+
+        private static void SaveClassTable(string path, IClassTable classTable)
+        {
+            WriteAllLines(path, classTable.SymbolClasses.Select(n => $"{n.Key,-20} {n.Value,-20}"));
+        }
+
+        private static void SaveLexemTable(string path, INodeCollection nodes)
+        {
+
+
+            var ns = nodes.Tokens;
+
+            var str = ns.Select(n => $"{n.Name,-20} {n.Id,-20}");
+
+            WriteAllLines(path, str);
+        }
 
         private static void Save(string path, string contents)
         {

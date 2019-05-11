@@ -73,35 +73,23 @@ namespace TranslatorS3
             mainWindow.StepOverClick += StepOver_Click;
             mainWindow.RunClick += Run_Click;
 
+            mainWindow.NewFileClick += MainWindow_NewFileClick;
+            mainWindow.OpenFileClick += MainWindow_OpenFileClick;
+
+            Editor.DocumentUpdated += Document_Updated;
+            Editor.DocumentFocused += Document_Focused;
+
             timer = new Timer() { AutoReset = false };
 
             mainWindow.Show();
 
-            Editor.DocumentUpdated += Document_Updated;
         }
+
+       
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Configuration.Load();
-
-            IDocument document;
-
-            if (Exists(Configuration.Path.ScriptTxt))
-            {
-                document = new Document(ReadAllText(Configuration.Path.ScriptTxt))
-                {
-                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
-                    Path = Configuration.Path.ScriptTxt,
-                };
-            }
-            else
-            {
-                document = new Document(ReadAllText(string.Empty))
-                {
-                    Name = "noname",
-                    Path = Configuration.Path.ScriptTxt,
-                };
-            }
 
             InitializeParsers();
 
@@ -111,11 +99,7 @@ namespace TranslatorS3
             Executor.Ended += Executor_Ended;
             Executor.Input += Executor_Input;
 
-            mainWindow.ScriptEditor.OpenDocument(document);
-
-            mainWindow.ScriptEditor.Focus(document);
-
-            Document_Updated(document);
+            OpenDefauldDocument();
         }
 
         private void InitializeParsers()
@@ -239,6 +223,67 @@ namespace TranslatorS3
         #endregion
 
 
+        #region File Operations
+
+        private bool TryOpenDocument(string path, out IDocument document)
+        {
+            if (!Exists(path))
+            {
+                document = null;
+                return false;
+            }
+
+            document = new Document(ReadAllText(path))
+            {
+                Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
+                Path = Configuration.Path.ScriptTxt,
+            };
+
+            return true;
+        }
+
+        private bool TryOpenAndFocusDocument(string path)
+        {
+            if (!TryOpenDocument(path, out var document))
+            {
+                return false;
+            }
+
+            mainWindow.ScriptEditor.OpenDocument(document);
+
+            mainWindow.ScriptEditor.Focus(document);
+
+            //Document_Updated(document);
+
+            return true;
+        }
+
+        private void OpenEmptyDocument()
+        {
+            var document = new Document("")
+            {
+                Name = "noname",
+                Path = Configuration.Path.ScriptTxt,
+            };
+
+            mainWindow.ScriptEditor.OpenDocument(document);
+
+            mainWindow.ScriptEditor.Focus(document);
+
+            //Document_Updated(document);
+        }
+
+        private void OpenDefauldDocument()
+        {
+            if (!TryOpenAndFocusDocument(Configuration.Path.ScriptTxt))
+            {
+                OpenEmptyDocument();
+            }
+        }
+
+        #endregion
+
+
         #region Top bar menu
 
         private void ShowConfiguration_Click(object sender, RoutedEventArgs e)
@@ -314,6 +359,34 @@ namespace TranslatorS3
             Executor.ExecutionNodes = RpnParserResult.RpnStream;
 
             _ = Executor.Run();
+        }
+
+        private void MainWindow_NewFileClick(object sender, RoutedEventArgs e)
+        {
+            OpenEmptyDocument();
+        }
+
+        private void MainWindow_OpenFileClick(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+
+            dlg.DefaultExt = ".txt";
+
+            //dlg.Filter = "JPEG Files (*.txt)|*.jpeg|PNG Files (*.png)|*.png|JPG Files (*.jpg)|*.jpg|GIF Files (*.gif)|*.gif";
+            dlg.Filter = "Text Files (*.txt)|*.txt";
+
+            bool? result = dlg.ShowDialog();
+
+            if (result ?? false)
+            {
+                // Open document.
+                string filename = dlg.FileName;
+
+                if (!TryOpenAndFocusDocument(filename))
+                {
+                    MessageBox.Show("Could not open document.");
+                }
+            }
         }
 
         #endregion
@@ -393,7 +466,23 @@ namespace TranslatorS3
 
             timer.Interval = TimeToAnalyze;
 
-            if (isTimerAssigned || timerAssignedDocument == document) return;
+            //if (isTimerAssigned || timerAssignedDocument == document) return;
+
+            //timer.Elapsed += (sender, e) =>
+            //{
+            //    Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+            //};
+            //isTimerAssigned = true;
+            //timerAssignedDocument = document;
+
+        }
+
+        private void Document_Focused(IDocument document)
+        {
+            //if (!timer.Enabled)
+            //    timer.Start();
+
+            //timer.Interval = TimeToAnalyze;
 
             timer.Elapsed += (sender, e) =>
             {
@@ -402,6 +491,8 @@ namespace TranslatorS3
             isTimerAssigned = true;
             timerAssignedDocument = document;
 
+            Document_Updated(document);
+            //throw new NotImplementedException();
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)

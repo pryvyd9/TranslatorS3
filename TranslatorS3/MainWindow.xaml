@@ -7,7 +7,7 @@
         xmlns:scriptEditor="clr-namespace:ScriptEditor;assembly=ScriptEditor"
         xmlns:errorPanel="clr-namespace:ErrorPanel;assembly=ErrorPanel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Translator" Height="450" Width="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="24"/>
@@ -17,9 +17,14 @@
         </Grid.RowDefinitions>
 
         <Menu>
+            <MenuItem Header="File">
+                <MenuItem Header="New" Click="NewFile_Click"/>
+                <MenuItem Header="Open" Click="OpenFile_Click"/>
+                <MenuItem Header="Save" Click="SaveFile_Click"/>
+            </MenuItem>
             <MenuItem Header="Config" Click="ShowConfiguration_Click"/>
             <MenuItem Header="Logger" Click="ShowLogger_Click"/>
-            <MenuItem Header="StepOver" Click="StepOver_Click"/>
+            <!--<MenuItem Header="StepOver" Click="StepOver_Click"/>-->
             <MenuItem Header="Run" Click="Run_Click"/>
         </Menu>
 

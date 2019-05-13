@@ -19,6 +19,7 @@ using static System.IO.File;
 
 namespace TranslatorS3
 {
+
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
@@ -39,8 +40,8 @@ namespace TranslatorS3
         private IExecutor Executor { get; set; }
 
 
-
-        private IDocument document;
+        private CoolEditor Editor => mainWindow.ScriptEditor;
+        private IDocument ActiveDocument => mainWindow.ScriptEditor.ActiveDocument;
 
 
         private readonly Timer timer;
@@ -54,10 +55,10 @@ namespace TranslatorS3
         private Window logWindow;
         private CWindow consoleWindow;
 
-
-
-
-
+        //private delegate void AnalysisFinishedEventHandler();
+        //private event AnalysisFinishedEventHandler AnalysisFinished;
+        private bool isBeingAnalysed;
+        private bool isDocumentBeingUpdated;
 
         #region Initialize
 
@@ -73,32 +74,24 @@ namespace TranslatorS3
             mainWindow.StepOverClick += StepOver_Click;
             mainWindow.RunClick += Run_Click;
 
+            mainWindow.NewFileClick += MainWindow_NewFileClick;
+            mainWindow.OpenFileClick += MainWindow_OpenFileClick;
+            mainWindow.SaveFileClick += MainWindow_SaveFileClick;
+
+            Editor.DocumentUpdated += Document_Updated;
+            Editor.DocumentFocused += Document_Focused;
+
             timer = new Timer() { AutoReset = false };
 
             mainWindow.Show();
 
         }
 
+       
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Configuration.Load();
-
-            if (Exists(Configuration.Path.ScriptTxt))
-            {
-                document = new Document(ReadAllText(Configuration.Path.ScriptTxt))
-                {
-                    Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
-                    Path = Configuration.Path.ScriptTxt,
-                };
-            }
-            else
-            {
-                document = new Document(ReadAllText(string.Empty))
-                {
-                    Name = "noname",
-                    Path = Configuration.Path.ScriptTxt,
-                };
-            }
 
             InitializeParsers();
 
@@ -108,13 +101,7 @@ namespace TranslatorS3
             Executor.Ended += Executor_Ended;
             Executor.Input += Executor_Input;
 
-            document.Updated += Document_Updated;
-
-            mainWindow.ScriptEditor.OpenDocument(document);
-
-            mainWindow.ScriptEditor.Focus(document);
-
-            Document_Updated(document);
+            OpenDefauldDocument();
         }
 
         private void InitializeParsers()
@@ -136,7 +123,8 @@ namespace TranslatorS3
 
             var controlTerminals = Grammar.Nodes.Terminals.Where(n => n.IsControl).Select(n => n.Name).ToArray();
 
-            mainWindow.ScriptEditor.ApplyTextColor(document, controlTerminals, Color.FromRgb(0, 0, 255));
+            Editor.DocumentOpened += (doc) => mainWindow.ScriptEditor.ApplyTextColor(doc, controlTerminals, Color.FromRgb(0, 0, 255));
+
 
             // Parse finite automaton
 
@@ -237,6 +225,76 @@ namespace TranslatorS3
         #endregion
 
 
+        #region File Operations
+
+        private bool TryOpenDocument(string path, out IDocument document)
+        {
+            if (!Exists(path))
+            {
+                document = null;
+                return false;
+            }
+
+            document = new Document(ReadAllText(path))
+            {
+                Name = Configuration.Path.ScriptTxt.Substring(Configuration.Path.ScriptTxt.LastIndexOf("\\") + 1),
+                Path = Configuration.Path.ScriptTxt,
+            };
+
+            return true;
+        }
+
+        private bool TryOpenAndFocusDocument(string path)
+        {
+            if (!TryOpenDocument(path, out var document))
+            {
+                return false;
+            }
+
+            mainWindow.ScriptEditor.OpenDocument(document);
+
+            mainWindow.ScriptEditor.Focus(document);
+
+            //Document_Updated(document);
+
+            return true;
+        }
+
+        private void OpenEmptyDocument()
+        {
+            var document = new Document("")
+            {
+                Name = "noname",
+                Path = Configuration.Path.ScriptTxt,
+            };
+
+            mainWindow.ScriptEditor.OpenDocument(document);
+
+            mainWindow.ScriptEditor.Focus(document);
+
+            //Document_Updated(document);
+        }
+
+        private void OpenDefauldDocument()
+        {
+            if (!TryOpenAndFocusDocument(Configuration.Path.ScriptTxt))
+            {
+                OpenEmptyDocument();
+            }
+        }
+
+        private void SaveDocument(string path, IDocument document)
+        {
+            var contentWithNoLastLineEnding = document.Text
+               .Take(ActiveDocument.Text.Length - 2)
+               .ToStr();
+
+            WriteAllText(path, contentWithNoLastLineEnding);
+        }
+
+        #endregion
+
+
         #region Top bar menu
 
         private void ShowConfiguration_Click(object sender, RoutedEventArgs e)
@@ -298,6 +356,12 @@ namespace TranslatorS3
 
         private async void Run_Click(object sender, RoutedEventArgs e)
         {
+            while (isBeingAnalysed || isDocumentBeingUpdated)
+            {
+                MessageBox.Show("Wait until analysis is finished.");
+                await Task.Delay(100);
+            }
+
             if (Executor.State != State.Idle && Executor.State != State.Paused)
             {
                 return;
@@ -306,7 +370,7 @@ namespace TranslatorS3
 
             while (RpnParserResult is null)
             {
-                await Task.Delay(10);
+                await Task.Delay(100);
             }
 
             Executor.ExecutionNodes = RpnParserResult.RpnStream;
@@ -314,44 +378,72 @@ namespace TranslatorS3
             _ = Executor.Run();
         }
 
+        private void MainWindow_NewFileClick(object sender, RoutedEventArgs e)
+        {
+            OpenEmptyDocument();
+        }
+
+        private void MainWindow_OpenFileClick(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+
+            dlg.DefaultExt = ".txt";
+
+            //dlg.Filter = "JPEG Files (*.txt)|*.jpeg|PNG Files (*.png)|*.png|JPG Files (*.jpg)|*.jpg|GIF Files (*.gif)|*.gif";
+            dlg.Filter = "Text Files (*.txt)|*.txt";
+
+            bool? result = dlg.ShowDialog();
+
+            if (result ?? false)
+            {
+                // Open document.
+                string filename = dlg.FileName;
+
+                if (!TryOpenAndFocusDocument(filename))
+                {
+                    MessageBox.Show("Could not open document.");
+                }
+            }
+        }
+
+        private void MainWindow_SaveFileClick(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+
+            dlg.DefaultExt = ".txt";
+
+            //dlg.Filter = "JPEG Files (*.txt)|*.jpeg|PNG Files (*.png)|*.png|JPG Files (*.jpg)|*.jpg|GIF Files (*.gif)|*.gif";
+            dlg.Filter = "Text Files (*.txt)|*.txt";
+
+            bool? result = dlg.ShowDialog();
+
+            if (result ?? false)
+            {
+                // Open document.
+                string filename = dlg.FileName;
+
+                try
+                {
+                    SaveDocument(filename, ActiveDocument);
+
+                    var documentName = System.IO.Path.GetFileName(filename);
+
+                    ActiveDocument.GetType().GetProperty("Name").SetValue(ActiveDocument, documentName);
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show("Could not save document." + exception.Message);
+                }
+            }
+        }
+
         #endregion
 
 
 
-
-        private void Update(IDocument document)
+        private void ShowErrors(IDocument document)
         {
-            ParserManager.TokenParser.Script = document.Text;
-            TokenParserResult = ParserManager.TokenParser.Parse();
-
-            if (ParsedTokens == null)
-            {
-                mainWindow.ErrorPanel.ReplaceErrors(document, new IParserError[] { });
-
-                return;
-            }
-
-            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
-            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
-
-            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
-            SemanticParserResult = ParserManager.SemanticParser.Parse();
-
-
-            if ((SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any()) && (SemanticParserResult.Errors is null || !SemanticParserResult.Errors.Any()))
-            {
-                ParserManager.RpnParser.ParsedTokens = ParsedTokens;
-                ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
-                RpnParserResult = ParserManager.RpnParser.Parse();
-            }
-
-
-            #region Show errors
-
-
-
             var errors = GetErrors().ToArray();
-
 
             var semanticErrors = errors
                .Where(n => n.Tag == "semantic")
@@ -379,36 +471,91 @@ namespace TranslatorS3
 
 
             mainWindow.ErrorPanel.ReplaceErrors(document, errors);
+        }
 
-            #endregion
+        private void Update(IDocument document)
+        {
+            isBeingAnalysed = true;
 
+            ParserManager.TokenParser.Script = document.Text;
+            TokenParserResult = ParserManager.TokenParser.Parse();
+
+            if (ParsedTokens == null)
+            {
+                mainWindow.ErrorPanel.ReplaceErrors(document, new IParserError[] { });
+
+                return;
+            }
+
+            ParserManager.SyntaxParser.ParsedTokens = ParsedTokens;
+            SyntaxParserResult = ParserManager.SyntaxParser.Parse();
+
+            ParserManager.SemanticParser.ParsedTokens = ParsedTokens;
+            SemanticParserResult = ParserManager.SemanticParser.Parse();
+
+
+            if ((!SyntaxParserResult.Errors?.Any() ?? true) && (!SemanticParserResult.Errors?.Any() ?? true))
+            //if ((SyntaxParserResult.Errors is null || !SyntaxParserResult.Errors.Any()) && (SemanticParserResult.Errors is null || !SemanticParserResult.Errors.Any()))
+            {
+                ParserManager.RpnParser.ParsedTokens = ParsedTokens;
+                ParserManager.RpnParser.RootScope = SemanticParserResult.RootScope;
+                RpnParserResult = ParserManager.RpnParser.Parse();
+            }
+
+            ShowErrors(document);
+
+            isBeingAnalysed = false;
         }
 
         private void Document_Updated(IDocument document)
         {
+            isDocumentBeingUpdated = true;
+
             if (!timer.Enabled)
                 timer.Start();
 
             timer.Interval = TimeToAnalyze;
 
-            if (isTimerAssigned || timerAssignedDocument == document) return;
+            //if (isTimerAssigned || timerAssignedDocument == document) return;
+
+            //timer.Elapsed += (sender, e) =>
+            //{
+            //    Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+            //};
+            //isTimerAssigned = true;
+            //timerAssignedDocument = document;
+
+        }
+
+        private void Document_Focused(IDocument document)
+        {
+            //if (!timer.Enabled)
+            //    timer.Start();
+
+            //timer.Interval = TimeToAnalyze;
 
             timer.Elapsed += (sender, e) =>
             {
-                Dispatcher.Invoke(() => Update(document), DispatcherPriority.Background);
+                Dispatcher.Invoke(() =>
+                {
+                    Update(document);
+                    isDocumentBeingUpdated = false;
+                }, DispatcherPriority.Background);
             };
             isTimerAssigned = true;
             timerAssignedDocument = document;
 
+            Document_Updated(document);
+            //throw new NotImplementedException();
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
-            var contentWithNoLastLineEnding = document.Text
-               .Take(document.Text.Length - 2)
-               .ToStr();
+            //var contentWithNoLastLineEnding = ActiveDocument.Text
+            //   .Take(ActiveDocument.Text.Length - 2)
+            //   .ToStr();
 
-            Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
+            //Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
 
             if (SyntaxParserResult != null)
             {
@@ -420,6 +567,9 @@ namespace TranslatorS3
             }
 
             SaveParsedTokensTxt(TokenParserResult);
+
+            SaveClassTable("Output/classTable.txt", Grammar.ClassTable);
+            SaveLexemTable("Output/lexemTable.txt", Grammar.Nodes);
 
             logWindow?.Close();
 
@@ -475,6 +625,31 @@ namespace TranslatorS3
         #endregion
 
         #region Save
+
+        //private static void SaveFiniteAutomaton(string path, IFiniteAutomaton automaton)
+        //{
+        //    var states = automaton.States.Select(n => 
+        //    {
+        //        var links = n.Value.Links.Select(m => $"{m.Key,-20} {m.Value,-20}");
+        //        $"{n.Key,-20} {string.Join("",links)}"
+        //        })
+        //}
+
+        private static void SaveClassTable(string path, IClassTable classTable)
+        {
+            WriteAllLines(path, classTable.SymbolClasses.Select(n => $"{n.Key,-20} {n.Value,-20}"));
+        }
+
+        private static void SaveLexemTable(string path, INodeCollection nodes)
+        {
+
+
+            var ns = nodes.Tokens;
+
+            var str = ns.Select(n => $"{n.Name,-20} {n.Id,-20}");
+
+            WriteAllLines(path, str);
+        }
 
         private static void Save(string path, string contents)
         {

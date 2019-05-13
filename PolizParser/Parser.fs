@@ -21,24 +21,27 @@ module Parse =
         object.GetType().GetProperty(name).SetValue(object, value)
 
     let getString (stream:Core.IExecutionStreamNode list) (nodes:Core.INode seq) =
-        stream |> List.map(function 
-        | :? Core.IVariable as v -> v.Name 
-        | :? Core.ILiteral as l -> string l.Value 
-        | :? Core.ICall as c -> (c.ParamCount |> string) + " " + c.Address + " call"
-        | :? Core.IUserJump -> "ujmp"
-        | :? Core.IJumpConditionalNegative as j -> j.Label.Name + " jn"
-        | :? Core.IJump as j -> j.Label.Name + " jmp"
-        | :? Core.ILabel as l -> l.Name + ":"
-        | x -> 
-            match x with
-            | :? Core.IDefinedStreamNode as s ->
-                match nodes |> Seq.tryFind(fun y -> y.Id = s.GrammarNodeId) with
-                | Some n -> n.Name
-                | None -> "unsupported"
-                //(nodes |> Seq.find(fun y -> y.Id = s.GrammarNodeId)).Name
-            | _ ->
-                "unsupported"
-        ) |> String.concat " "
+        stream
+        |> List.map
+            (function 
+            | :? Core.IVariable as v -> v.Name 
+            | :? Core.ILiteral as l -> string l.Value 
+            | :? Core.ICall as c -> (c.ParamCount |> string) + " " + c.Address + " call"
+            | :? Core.IUserJump -> "ujmp"
+            | :? Core.IJumpConditionalNegative as j -> j.Label.Name + " jn"
+            | :? Core.IJump as j -> j.Label.Name + " jmp"
+            | :? Core.ILabel as l -> l.Name + ":"
+            | x -> 
+                match x with
+                | :? Core.IDefinedStreamNode as s ->
+                    nodes 
+                    |> Seq.tryFind(fun y -> y.Id = s.GrammarNodeId)
+                    |> function
+                    | Some n -> n.Name
+                    | None -> "unsupported"
+                | _ ->
+                    "unsupported")
+        |> String.concat " "
 
 
 
@@ -77,7 +80,7 @@ module Parse =
 
                         putStream delimiter.ChildScope.RpnStream
 
-                    | Type.ScopeOut | Type.Breaker | Type.Streamer ->
+                    | Type.ScopeOut | Type.Breaker | Type.Streamer -> 
                         ()
                     | Type.ParensIn -> 
                         stacks <- ref[] :: stacks
@@ -88,11 +91,8 @@ module Parse =
                             putStack stacks.Head.Value
                             stacks <- stacks.Tail
 
-                    | Type.Statement ->
-                        failwith("Delimiter cannot be a statement.")
-
-                    | _ ->
-                        failwith("Undefined delimiter type")
+                    | Type.Statement -> failwith("Delimiter cannot be a statement.")
+                    | _ -> failwith("Undefined delimiter type")
 
                 | :? Core.IOperator as operator ->
                     let grammarNode = nodes |> Seq.find(fun x -> x.Id = operator.GrammarNodeId) 
@@ -145,36 +145,34 @@ module Parse =
             let rule = statementRules |> List.find(fun x -> x.name = statementName)
             
             let case = 
-                match rule.cases 
-                    |> List.tryFind(fun x -> 
-                        x.streamCount = (statement.Streams |> Seq.length |> Some)) with
+                rule.cases 
+                |> List.tryFind 
+                    (fun x -> x.streamCount = (statement.Streams |> Seq.length |> Some))
+                |> function
                 | None -> rule.cases |> List.find(fun x -> x.streamCount = None)
                 | Some case -> case
             
-            let rpnStreams = [
-                for stream in statement.Streams ->
-                    getRpnStream stream 
-            ]
+            let rpnStreams =
+                statement.Streams 
+                |> Seq.map getRpnStream
+                |> List.ofSeq
             
             let mutable (rpnStream:Core.IExecutionStreamNode list) = []
-            
-            let definitions = [
-                for rule in case.rules do
-                    match rule with
-                    | Definition definition ->
-                        match definition with
-                        | Label label ->
-                            yield{
-                                new Core.ILabel with
-                                    member __.Scope = statement.Scope
-                                    member __.Type = Type.None
-                                    member __.Name = label.name
-                            } :> Core.IExecutionStreamNode
-                    | _ -> ()
-            ]
-            
            
-            let put stream x =
+            let definitions = 
+                case.rules 
+                |> List.choose 
+                    (function 
+                    | Definition(Label label) -> 
+                        {
+                            new Core.ILabel with
+                                member __.Scope = statement.Scope
+                                member __.Type = Type.None
+                                member __.Name = label.name
+                        } :> Core.IExecutionStreamNode |> Some
+                    | _ -> None)
+           
+            let put x =
                 rpnStream <- rpnStream @ [x :> Core.IExecutionStreamNode]
 
             let putStream x =
@@ -191,42 +189,39 @@ module Parse =
             for rule in case.rules do
                 match rule with     
                 | Stream stream -> rpnStreams.[stream.id] |> List.ofSeq |> putStream
-                | Definition definition ->
-                    match definition with
-                    | Label label -> labelsWithName label.name |> put (label.name)
-                          
+                | Definition (Label label) -> label.name |> labelsWithName |> put
                 | Reference reference ->
                     match reference with
                     | Call call ->
                         {
                             new Core.ICall with
-                            member __.Address = call.address
-                            member __.ParamCount = call.paramCount
-                            member __.Scope = statement.Scope
-                            member __.Type = Type.None
-                        } |> put ("call " + call.address + " with " + (call.paramCount |> string))
+                                member __.Address = call.address
+                                member __.ParamCount = call.paramCount
+                                member __.Scope = statement.Scope
+                                member __.Type = Type.None
+                        } |> put
                     | Jmp jmp ->
                         {
                             new Core.IJump with
-                            member __.Label = labelsWithName jmp.address
-                            member __.Scope = statement.Scope
-                            member __.Type = Type.None
-                        } |> put ("jmp " + jmp.address)
+                                member __.Label = labelsWithName jmp.address
+                                member __.Scope = statement.Scope
+                                member __.Type = Type.None
+                        } |> put
                     | Jn jn ->
                         {
                             new Core.IJumpConditionalNegative with
-                            member __.Label = labelsWithName jn.address
-                            member __.Scope = statement.Scope
-                            member __.Type = Type.None
-                        } |> put  ("jn " + jn.address)
+                                member __.Label = labelsWithName jn.address
+                                member __.Scope = statement.Scope
+                                member __.Type = Type.None
+                        } |> put
                     | Ujmp ->
                         let label = (statement.Streams |> Seq.last |> Seq.rev |> Seq.item 1) :?> Core.IDefinedLabel
                         {
                             new Core.IUserJump with
-                            member __.Label = label:>Core.ILabel
-                            member __.Scope = statement.Scope
-                            member __.Type = Type.None
-                        } |> put  ("ujmp " + label.Name)
+                                member __.Label = label :> Core.ILabel
+                                member __.Scope = statement.Scope
+                                member __.Type = Type.None
+                        } |> put
             
             rpnStream
 
@@ -277,7 +272,9 @@ module Optimize =
         let rpnStream = rootScope.GetRpnConsistentStream()
 
         let mutable i = 0
+
         // original stream index
+        // used to find position in original stream
         let mutable oi = 0
         let mutable currentScope = rootScope
 

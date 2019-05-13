@@ -44,7 +44,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="StatementRuleParser.fs" />
-    <Compile Include="Hash.fs" />
     <Compile Include="Parser.fs" />
     <Content Include="packages.config" />
   </ItemGroup>

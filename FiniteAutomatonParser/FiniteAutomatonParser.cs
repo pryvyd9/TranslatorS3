@@ -47,15 +47,53 @@ namespace FiniteAutomatonParser
 
             var optimizedFiniteStates = OptimizeFiniteStates(finiteStates);
 
+            var referencedStates = RemoveUnreferencedStates(optimizedFiniteStates, startState);
+
+            var fixedIndexStates = FixIndexingStates(referencedStates);
+
             return new FiniteAutomatonParserResult
             {
                 StartState = startState,
-                States = optimizedFiniteStates
+                States = fixedIndexStates
                     .ToDictionary(n=>n.Key, n=>n.Value as IFiniteState),
             };
         }
 
         #region FiniteStates
+
+        private Dictionary<int, FiniteState> RemoveUnreferencedStates(Dictionary<int, FiniteState> states, int rootState)
+        {
+            var referencedStates = states
+                .Where(n => states.Any(m => m.Value.Links?.Values.Contains(n.Key) ?? false))
+                .Prepend(states.First(n => n.Key == rootState))
+                .ToDictionary(n => n.Key, n => n.Value);
+
+            return referencedStates;
+        }
+
+        private Dictionary<int, FiniteState> FixIndexingStates(Dictionary<int, FiniteState> states)
+        {
+            var bindedIndices = states.Keys.Select((n, i) => (n, i)).ToDictionary(n => n.n, n => n.i);
+
+            var newStates = states
+                .ToDictionary(n =>
+                    bindedIndices[n.Key],
+                    n =>
+                    {
+                        n.Value.Links = n.Value.Links?.ToDictionary(m => m.Key, m => bindedIndices[m.Value]);
+                        return n.Value;
+                    }
+                );
+
+
+
+            return newStates;
+        }
+
+        //private Dictionary<int, FiniteState> MergeLoopReferences(Dictionary<int, FiniteState> states)
+        //{
+
+        //}
 
         /// <summary>
         /// Creates finite automaton based on tokens and unclassified tokens

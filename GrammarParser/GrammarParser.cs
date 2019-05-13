@@ -375,7 +375,7 @@ namespace GrammarParser
         /// a(b)
         /// 3.
         /// factor.FactorCases[c] = Factorize(d)
-        /// factor.IsInterraptable = true
+        /// factor.IsInterruptable = true
         /// a(b(c|^))
         /// 4.
         /// factor.FactorCases[d] = null

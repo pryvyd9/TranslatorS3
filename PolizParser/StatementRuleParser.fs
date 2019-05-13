@@ -3,10 +3,8 @@
 open System.Xml.Linq
 
 module private Xml =
-    let private (|NotNull|_|) e =
-        match e with
-        | null -> None
-        |_-> Some e
+    let (|NotNull|_|) = function null -> None | x -> Some x
+
 
     let private xname name = XName.Get name
 
@@ -60,43 +58,46 @@ module Types =
 
 
 let parseCase (caseNode:XElement) =
-    let nodes = [
-        for node in caseNode |> allElements ->
+
+    let nodes =
+        caseNode
+        |> allElements
+        |> List.map
+            (fun node ->
+
+            let attr name = node |> attribute name
+
             match node.Name.LocalName with
             | "s" ->
-               let id = node |> attribute "id" |> int
-               Stream{id=id} 
+                Stream{ id = attr "id" |> int }
             | "r" ->
-                match node |> attribute "call" with
-                | null ->
-                    match node |> attribute "jmp" with
-                    | null ->
-                        match node |> attribute "jn" with
-                        | null ->
-                            match node |> attribute "ujmp" with
-                            | null ->
-                                failwith("Unsupported reference.")
-                            | ujmp -> 
-                                Ujmp |> Reference
-                        | jn -> 
-                            Jn{address=jn}
-                            |> Reference
-                    | jmp ->
-                        Jmp{address=jmp}
-                        |> Reference
-                | call ->
-                    Call{address=call;paramCount=node |> attribute "param-count" |> int}
+                match attr "call" with
+                | NotNull x ->
+                    Call{ address = x; paramCount = attr "param-count" |> int}
                     |> Reference
+                | _ -> 
+                    match attr "jmp" with
+                    | NotNull x ->
+                        Jmp{ address = x }
+                        |> Reference
+                    | _ ->
+                        match attr "jn" with
+                        | NotNull x ->
+                            Jn{ address = x }
+                            |> Reference
+                        | _ ->
+                            match attr "ujmp" with
+                            | NotNull _ -> 
+                                Ujmp 
+                                |> Reference
+                            | _ -> failwith "Unsupported reference."
             | "d" ->
-                match node |> attribute "label" with
-                | null ->
-                    failwith("Unsupported definition.")
-                | label ->
-                    Label{name=label}
+                match attr "label" with
+                | NotNull x ->
+                    Label{ name = x }
                     |> Definition
-            | _ ->
-                failwith("Unsupported rule node.")
-    ]
+                | _ -> failwith "Unsupported definition."
+            | _ -> failwith "Unsupported rule node.")
 
     {
         rules = nodes; 
@@ -107,19 +108,21 @@ let parseCase (caseNode:XElement) =
     }
 
 let parseStatement (statementNode:XElement) =
-    let cases = [
-        for case in statementNode |> elements "c" ->
-            parseCase case
-    ]
+    let cases =
+        statementNode
+        |> elements "c"
+        |> Seq.map parseCase
+        |> List.ofSeq
 
-    {cases=cases; name = statementNode |> attribute "name"}
+    { cases = cases; name = statementNode |> attribute "name" }
 
 
 let parse (path:string) =
     let rootElement = path |> load |> element "statements"
-    let statements = [
-        for node in rootElement |> elements "statement" ->
-            parseStatement node
-    ]
+    let statements =
+         rootElement 
+         |> elements "statement" 
+         |> Seq.map parseStatement
+         |> List.ofSeq
 
     statements

@@ -7,7 +7,7 @@
         xmlns:scriptEditor="clr-namespace:ScriptEditor;assembly=ScriptEditor"
         xmlns:errorPanel="clr-namespace:ErrorPanel;assembly=ErrorPanel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="Translator" Height="450" Width="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="24"/>

@@ -27,7 +27,7 @@ namespace Core
         {
             if(classId == null)
             {
-                return parsedTokens.Select((n, i) => new { Id = i, n.Name, n.TokenClassId, IdInRespectiveTable = GetTable(n.TokenClassId)[n.Name] });
+                return parsedTokens.Select((n, i) => new { N = i, Id = n.Id, n.Name, n.TokenClassId, IdInRespectiveTable = GetTable(n.TokenClassId)[n.Name] });
             }
             else
             {

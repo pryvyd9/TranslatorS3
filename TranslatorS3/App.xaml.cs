@@ -426,6 +426,9 @@ namespace TranslatorS3
                 {
                     SaveDocument(filename, ActiveDocument);
 
+                    var documentName = System.IO.Path.GetFileName(filename);
+
+                    ActiveDocument.GetType().GetProperty("Name").SetValue(ActiveDocument, documentName);
                 }
                 catch (Exception exception)
                 {
@@ -548,11 +551,11 @@ namespace TranslatorS3
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
-            var contentWithNoLastLineEnding = ActiveDocument.Text
-               .Take(ActiveDocument.Text.Length - 2)
-               .ToStr();
+            //var contentWithNoLastLineEnding = ActiveDocument.Text
+            //   .Take(ActiveDocument.Text.Length - 2)
+            //   .ToStr();
 
-            Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
+            //Save(Configuration.Path.ScriptTxt, contentWithNoLastLineEnding);
 
             if (SyntaxParserResult != null)
             {
